@@ -1,0 +1,60 @@
+import type { SupplyChainNode } from "@/types";
+
+export const mockSupplyChainRoot: SupplyChainNode = {
+  id: "root",
+  name: "CarbonOS Corp",
+  tier: 0,
+  category: "Organization",
+  emissionsMtCO2e: 12450,
+  riskLevel: "low",
+  status: "verified",
+  children: [
+    {
+      id: "t1-a",
+      name: "Acme Raw Materials Ltd",
+      tier: 1,
+      category: "Raw materials",
+      emissionsMtCO2e: 3200,
+      riskLevel: "medium",
+      status: "verified",
+      children: [
+        {
+          id: "t2-a1",
+          name: "Global Ore Corp",
+          tier: 2,
+          category: "Mining",
+          emissionsMtCO2e: 1800,
+          riskLevel: "high",
+          status: "estimated",
+        },
+        {
+          id: "t2-a2",
+          name: "Green Polymers Inc",
+          tier: 2,
+          category: "Chemicals",
+          emissionsMtCO2e: 900,
+          riskLevel: "low",
+          status: "verified",
+        },
+      ],
+    },
+    {
+      id: "t1-b",
+      name: "Logistics Partners Co",
+      tier: 1,
+      category: "Transport & distribution",
+      emissionsMtCO2e: 1680,
+      riskLevel: "low",
+      status: "verified",
+    },
+    {
+      id: "t1-c",
+      name: "Data Center Solutions",
+      tier: 1,
+      category: "IT & cloud",
+      emissionsMtCO2e: 420,
+      riskLevel: "low",
+      status: "verified",
+    },
+  ],
+};
