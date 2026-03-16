@@ -64,6 +64,7 @@ export const NAV_ITEMS: NavItem[] = [
           link("/data/emissions/scope1", "Scope 1"),
           link("/data/emissions/scope2", "Scope 2"),
           link("/data/emissions/scope3", "Scope 3"),
+          link("/data/emissions/factors", "배출계수 마스터"),
         ],
       },
       {
@@ -202,6 +203,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   "/data/emissions/scope1": "Scope 1",
   "/data/emissions/scope2": "Scope 2",
   "/data/emissions/scope3": "Scope 3",
+  "/data/emissions/factors": "배출계수 마스터",
   "/data/verification": "데이터 검증",
   "/data/approval": "데이터 승인 / 확정",
   "/data/supply-chain/vendors": "협력사 포털",

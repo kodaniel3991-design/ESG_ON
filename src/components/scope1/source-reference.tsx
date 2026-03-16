@@ -1,20 +1,21 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { SCOPE2_SOURCES } from "@/lib/scope2-mock-data";
-import type { Scope2CategoryId } from "@/types/scope2";
+import { SCOPE1_SOURCES } from "@/lib/scope1-mock-data";
+import type { ScopeCategoryId } from "@/types/scope1";
 
-interface Scope2SourceExamplesProps {
-  activeCategoryId: Scope2CategoryId;
+interface SourceReferenceProps {
+  activeCategoryId: ScopeCategoryId;
 }
 
-const CATEGORY_LABELS: Record<Scope2CategoryId, string> = {
-  electricity: "구입전력",
-  heat: "증기·난방",
+const CATEGORY_LABELS: Record<ScopeCategoryId, string> = {
+  fixed: "고정연소",
+  mobile: "이동연소",
+  fugitive: "비가스배출",
 };
 
-export function Scope2SourceExamples({ activeCategoryId }: Scope2SourceExamplesProps) {
-  const sources = SCOPE2_SOURCES.filter((s) => s.categoryId === activeCategoryId);
+export function SourceReference({ activeCategoryId }: SourceReferenceProps) {
+  const sources = SCOPE1_SOURCES.filter((s) => s.categoryId === activeCategoryId);
 
   return (
     <section className="flex h-full flex-col space-y-3">
@@ -29,8 +30,8 @@ export function Scope2SourceExamples({ activeCategoryId }: Scope2SourceExamplesP
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-              <th className="px-3 py-2 text-left font-medium">사용처</th>
-              <th className="px-3 py-2 text-left font-medium">에너지 유형</th>
+              <th className="px-3 py-2 text-left font-medium">배출원</th>
+              <th className="px-3 py-2 text-left font-medium">연료</th>
               <th className="px-3 py-2 text-left font-medium">단위</th>
               <th className="px-2 py-2 text-right font-medium">배출계수</th>
               <th className="px-3 py-2 text-left font-medium">출처</th>
@@ -44,7 +45,7 @@ export function Scope2SourceExamples({ activeCategoryId }: Scope2SourceExamplesP
                 className="border-b border-border/60 last:border-0"
               >
                 <td className="px-3 py-2 text-xs font-medium">{source.name}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{source.energyType}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{source.fuelType}</td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{source.unit}</td>
                 <td className="px-2 py-2 text-right text-xs text-muted-foreground">
                   {source.emissionFactor.toFixed(3)}

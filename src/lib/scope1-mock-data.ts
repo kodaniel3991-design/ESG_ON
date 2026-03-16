@@ -10,20 +10,17 @@ export const SCOPE1_CATEGORIES: ScopeCategory[] = [
   {
     id: "fixed",
     label: "고정연소",
-    factorSource:
-      "환경부 온실가스 배출계수 관리시스템(KUET) - 고정연소 연료 계수 예시",
+    factorSource: "국립환경과학원 국가 온실가스 배출·흡수계수 (NIER-2023)",
   },
   {
     id: "mobile",
     label: "이동연소",
-    factorSource:
-      "환경부 온실가스 배출계수 관리시스템(KUET) - 수송 연료 계수 예시",
+    factorSource: "국립환경과학원 국가 온실가스 배출·흡수계수 (NIER-2023)",
   },
   {
     id: "fugitive",
     label: "비가스배출",
-    factorSource:
-      "IPCC 가이드라인 또는 사내 기준에 기반한 예시 계수",
+    factorSource: "IPCC 2006 가이드라인 / NIER-2023",
   },
 ];
 
@@ -35,6 +32,12 @@ export const SCOPE1_FUELS: Scope1FuelType[] = [
 
 export const SCOPE1_UNITS: Scope1Unit[] = ["Nm3", "L", "kg"];
 
+// NIER-2023 합산 배출계수 (tCO₂e/연료단위) — co2 + ch4×GWP28 + n2o×GWP265
+// LNG(Nm3): 0.002244 + 2e-7×28 + 4e-9×265 ≈ 0.002251
+// Diesel-fixed(L): 0.0026128 + 1.76e-7×28 + 3.5e-9×265 ≈ 0.002618
+// Diesel-mobile(L): 0.0026128 + 1.375e-7×28 + 1.375e-7×265 ≈ 0.002653
+// Gasoline-mobile(L): 0.0022204 + 9.612e-7×28 + 9.61e-8×265 ≈ 0.002273
+
 export const SCOPE1_SOURCES: EmissionSource[] = [
   {
     id: "source-1",
@@ -43,8 +46,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "LNG",
     unit: "Nm3",
     status: "active",
-    emissionFactor: 1.5,
-    factorSource: "LNG 고정연소 KUET 계수 예시",
+    emissionFactor: 0.002251,  // NIER-2023 S1-LNG-KR-2024  (tCO₂e/Nm3)
+    factorSource: "NIER-2023 S1-LNG-KR-2024",
   },
   {
     id: "source-2",
@@ -53,8 +56,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "Diesel",
     unit: "L",
     status: "active",
-    emissionFactor: 2.7,
-    factorSource: "경유 연소 KUET 계수 예시",
+    emissionFactor: 0.002618,  // NIER-2023 S1-DIESEL-FIXED-KR-2024  (tCO₂e/L)
+    factorSource: "NIER-2023 S1-DIESEL-FIXED-KR-2024",
   },
   {
     id: "source-3",
@@ -63,8 +66,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "Gasoline",
     unit: "L",
     status: "active",
-    emissionFactor: 2.3,
-    factorSource: "휘발유 수송연소 KUET 계수 예시",
+    emissionFactor: 0.002273,  // NIER-2023 S1-GASOLINE-MOBILE-KR-2024  (tCO₂e/L)
+    factorSource: "NIER-2023 S1-GASOLINE-MOBILE-KR-2024",
   },
   {
     id: "source-9",
@@ -73,8 +76,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "LNG",
     unit: "Nm3",
     status: "active",
-    emissionFactor: 1.5,
-    factorSource: "LNG 고정연소 KUET 계수 예시",
+    emissionFactor: 0.002251,  // NIER-2023 S1-LNG-KR-2024  (tCO₂e/Nm3)
+    factorSource: "NIER-2023 S1-LNG-KR-2024",
   },
   {
     id: "source-4",
@@ -83,8 +86,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "Diesel",
     unit: "L",
     status: "active",
-    emissionFactor: 2.7,
-    factorSource: "경유 연소 KUET 계수 예시",
+    emissionFactor: 0.002653,  // NIER-2023 S1-DIESEL-MOBILE-KR-2024  (tCO₂e/L)
+    factorSource: "NIER-2023 S1-DIESEL-MOBILE-KR-2024",
   },
   {
     id: "source-5",
@@ -93,8 +96,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "Diesel",
     unit: "L",
     status: "active",
-    emissionFactor: 2.7,
-    factorSource: "경유 연소 KUET 계수 예시",
+    emissionFactor: 0.002653,  // NIER-2023 S1-DIESEL-MOBILE-KR-2024  (tCO₂e/L)
+    factorSource: "NIER-2023 S1-DIESEL-MOBILE-KR-2024",
   },
   {
     id: "source-6",
@@ -103,8 +106,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "LNG",
     unit: "Nm3",
     status: "active",
-    emissionFactor: 1.5,
-    factorSource: "공정 연소·배출 계수 예시",
+    emissionFactor: 0.002251,  // NIER-2023 S1-LNG-KR-2024  (tCO₂e/Nm3)
+    factorSource: "NIER-2023 S1-LNG-KR-2024",
   },
   {
     id: "source-7",
@@ -113,8 +116,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "Gasoline",
     unit: "kg",
     status: "active",
-    emissionFactor: 2.3,
-    factorSource: "냉매 누설 계수 예시",
+    emissionFactor: 0.002273,  // NIER-2023 S1-GASOLINE-MOBILE-KR-2024 (참고치, 냉매는 별도 계수 필요)
+    factorSource: "NIER-2023 S1-GASOLINE-MOBILE-KR-2024 (참고치)",
   },
   {
     id: "source-8",
@@ -123,8 +126,8 @@ export const SCOPE1_SOURCES: EmissionSource[] = [
     fuelType: "LNG",
     unit: "Nm3",
     status: "active",
-    emissionFactor: 1.5,
-    factorSource: "산업용 가스 누출 계수 예시",
+    emissionFactor: 0.002251,  // NIER-2023 S1-LNG-KR-2024  (tCO₂e/Nm3)
+    factorSource: "NIER-2023 S1-LNG-KR-2024",
   },
 ];
 

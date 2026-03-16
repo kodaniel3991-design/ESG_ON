@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import { ScopeHeader } from "@/components/scope1/scope-header";
 import { CategorySidebar } from "@/components/scope1/category-sidebar";
-import { SourceList } from "@/components/scope1/source-list";
-import { SourceExamples } from "@/components/scope1/source-examples";
+import {
+  SourceInfoCard,
+  INITIAL_FACILITY_ROWS_BY_CATEGORY,
+  type FacilityRow,
+} from "@/components/scope1/source-info-card";
+import { SourceReference } from "@/components/scope1/source-reference";
 import { MonthlyActivityTable } from "@/components/scope1/monthly-activity-table";
 import { ValidationInsightsCard } from "@/components/scope1/validation-insights-card";
 import { EmissionTrendCard } from "@/components/scope1/emission-trend-card";
@@ -13,43 +18,206 @@ import { ActionFooter } from "@/components/scope1/action-footer";
 import {
   SCOPE1_AUDIT_LOGS,
   SCOPE1_CATEGORIES,
-  SCOPE1_SOURCES,
 } from "@/lib/scope1-mock-data";
-import type { ScopeCategoryId } from "@/types/scope1";
+import type { Scope1FuelType, ScopeCategoryId } from "@/types/scope1";
 import { SCOPE1_DEFAULT_TREND } from "@/lib/scope1-utils";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useFacilities, useSaveFacilities, type DbFacilityRow } from "@/hooks/use-facilities";
+import { useActivity, useSaveActivity } from "@/hooks/use-activity";
 
 type InputMode = "manual" | "excel" | "api";
+
+const VALID_FUELS: Scope1FuelType[] = ["LNG", "Diesel", "Gasoline"];
+function toFuelType(name: string): Scope1FuelType {
+  return (VALID_FUELS.includes(name as Scope1FuelType) ? name : "LNG") as Scope1FuelType;
+}
+
+function dbRowsToFacility(rows: DbFacilityRow[]): FacilityRow[] {
+  return rows.map((r) => ({
+    id: r.id,
+    facilityName: r.facility_name,
+    fuelName: r.fuel_type ?? "LNG",
+    unit: r.unit,
+    dataMethod: r.data_method,
+  }));
+}
+
+function facilityToDbRows(rows: FacilityRow[], scope = 1, categoryId = "fixed"): DbFacilityRow[] {
+  return rows.map((r, i) => ({
+    id: r.id,
+    scope,
+    category_id: categoryId,
+    facility_name: r.facilityName,
+    fuel_type: r.fuelName,
+    energy_type: null,
+    activity_type: null,
+    unit: r.unit,
+    data_method: r.dataMethod,
+    sort_order: i,
+  }));
+}
+
+const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+const CATEGORY_LABELS: Record<string, string> = {
+  fixed: "고정연소", mobile: "이동연소", fugitive: "비가스배출",
+};
 
 export default function Scope1Page() {
   const [year, setYear] = useState("2024");
   const [inputMode, setInputMode] = useState<InputMode>("manual");
-  const [selectedCategoryId, setSelectedCategoryId] =
-    useState<ScopeCategoryId>("fixed");
-  const [selectedSourceId, setSelectedSourceId] = useState<string>(
-    SCOPE1_SOURCES[0]?.id ?? "",
-  );
-  const [activityByMonth, setActivityByMonth] = useState<number[]>(
-    () => Array(12).fill(0),
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<ScopeCategoryId>("fixed");
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(
+    INITIAL_FACILITY_ROWS_BY_CATEGORY["fixed"]?.[0]?.id ?? "",
   );
 
-  const selectedCategory = useMemo(
-    () => SCOPE1_CATEGORIES.find((c) => c.id === selectedCategoryId),
-    [selectedCategoryId],
+  // DB에서 시설 목록 로드 (실패 시 초기값 사용)
+  const { data: dbFacilities } = useFacilities(1, selectedCategoryId);
+  const saveFacilitiesMutation = useSaveFacilities(1, selectedCategoryId);
+
+  const facilities: FacilityRow[] = useMemo(
+    () =>
+      dbFacilities && dbFacilities.length > 0
+        ? dbRowsToFacility(dbFacilities)
+        : (INITIAL_FACILITY_ROWS_BY_CATEGORY[selectedCategoryId] ?? []),
+    [dbFacilities, selectedCategoryId],
+  );
+  const [localFacilities, setLocalFacilities] = useState<FacilityRow[]>([]);
+
+  useEffect(() => {
+    setSelectedFacilityId("");
+    setLocalFacilities([]);
+  }, [selectedCategoryId]);
+
+  const effectiveFacilities = localFacilities.length > 0 ? localFacilities : facilities;
+
+  // DB에서 월별 활동량 로드
+  const { data: dbActivity } = useActivity(selectedFacilityId, year);
+  const saveActivityMutation = useSaveActivity();
+  const [localActivity, setLocalActivity] = useState<Record<string, number[]>>({});
+
+  const currentActivity = useMemo(() => {
+    if (localActivity[selectedFacilityId]) return localActivity[selectedFacilityId];
+    if (dbActivity) return dbActivity;
+    return Array(12).fill(0);
+  }, [localActivity, selectedFacilityId, dbActivity]);
+
+  const selectedFacility = useMemo(
+    () => effectiveFacilities.find((f) => f.id === selectedFacilityId),
+    [effectiveFacilities, selectedFacilityId],
   );
 
-  const selectedSource = useMemo(
-    () => SCOPE1_SOURCES.find((s) => s.id === selectedSourceId),
-    [selectedSourceId],
-  );
+  const handleActivityChange = (values: number[]) => {
+    setLocalActivity((prev) => ({ ...prev, [selectedFacilityId]: values }));
+  };
 
-  const visibleSources = useMemo(
-    () => SCOPE1_SOURCES.filter((s) => s.categoryId === selectedCategoryId),
-    [selectedCategoryId],
-  );
+  const handleSaveActivity = () => {
+    if (!selectedFacilityId) return;
+    saveActivityMutation.mutate({
+      facilityId: selectedFacilityId,
+      year,
+      values: currentActivity,
+    });
+  };
 
-  // 데모용: Trend 차트는 항상 기본 데이터로 표시
+  const handleSaveFacilities = (rows: FacilityRow[]) => {
+    saveFacilitiesMutation.mutate(facilityToDbRows(rows, 1, selectedCategoryId));
+    setLocalFacilities(rows);
+  };
+
+  // ── Excel 템플릿 다운로드 ──────────────────────────────────────
+  const handleDownloadTemplate = () => {
+    const categoryLabel = CATEGORY_LABELS[selectedCategoryId] ?? selectedCategoryId;
+    const header = ["연도", "카테고리", "시설명", "연료", "단위", ...MONTH_LABELS];
+
+    const dataRows = effectiveFacilities.map((f) => {
+      const activity = localActivity[f.id] ??
+        (selectedFacilityId === f.id && dbActivity ? dbActivity : Array(12).fill(0));
+      return [year, categoryLabel, f.facilityName, f.fuelName, f.unit, ...activity];
+    });
+
+    // 안내 주석 행 포함
+    const noteRow = ["※ 활동량(숫자)만 수정하세요. 연도·시설명·연료·단위는 변경하지 마세요."];
+
+    const ws = XLSX.utils.aoa_to_sheet([noteRow, header, ...dataRows]);
+
+    // 열 너비 설정
+    ws["!cols"] = [
+      { wch: 6 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 6 },
+      ...Array(12).fill({ wch: 8 }),
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "월별활동량");
+    XLSX.writeFile(wb, `Scope1_${categoryLabel}_월별활동량_${year}.xlsx`);
+  };
+
+  // ── Excel 업로드 파싱 ─────────────────────────────────────────
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target?.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 }) as (string | number)[][];
+
+        // 첫 행이 안내 주석이면 건너뜀, 헤더 행 찾기
+        const headerRowIdx = rows.findIndex(
+          (r) => String(r[0]).trim() === "연도" || String(r[1]).trim() === "카테고리",
+        );
+        if (headerRowIdx === -1) {
+          alert("올바른 템플릿 형식이 아닙니다.\n헤더 행(연도, 카테고리, 시설명 …)을 찾을 수 없습니다.");
+          return;
+        }
+
+        const header = rows[headerRowIdx].map((h) => String(h).trim());
+        const nameIdx = header.indexOf("시설명");
+        const monthStartIdx = header.indexOf("1월");
+
+        if (nameIdx === -1 || monthStartIdx === -1) {
+          alert("시설명 또는 월별 컬럼을 찾을 수 없습니다.");
+          return;
+        }
+
+        const newActivity: Record<string, number[]> = { ...localActivity };
+        let matched = 0;
+
+        for (const row of rows.slice(headerRowIdx + 1)) {
+          if (!row[nameIdx]) continue;
+          const facilityName = String(row[nameIdx]).trim();
+          const facility = effectiveFacilities.find((f) => f.facilityName === facilityName);
+          if (!facility) continue;
+
+          const values = Array.from({ length: 12 }, (_, i) => {
+            const v = row[monthStartIdx + i];
+            const n = typeof v === "number" ? v : parseFloat(String(v ?? "0"));
+            return Number.isNaN(n) ? 0 : Math.round(n * 1000) / 1000;
+          });
+          newActivity[facility.id] = values;
+          matched++;
+        }
+
+        if (matched === 0) {
+          alert("일치하는 시설명을 찾지 못했습니다.\n템플릿의 시설명이 현재 등록된 시설과 일치해야 합니다.");
+        } else {
+          setLocalActivity(newActivity);
+          // 업로드 후 첫 시설 자동 선택
+          if (!selectedFacilityId && effectiveFacilities[0]) {
+            setSelectedFacilityId(effectiveFacilities[0].id);
+          }
+          alert(`${matched}개 시설의 활동량이 반영됐습니다.\n확인 후 "활동량 저장" 버튼을 눌러 저장하세요.`);
+        }
+      } catch {
+        alert("파일을 읽는 중 오류가 발생했습니다.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
   const monthlyTotals = SCOPE1_DEFAULT_TREND;
 
   return (
@@ -57,31 +225,31 @@ export default function Scope1Page() {
       <ScopeHeader year={year} />
 
       <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-        {/* 좌측 카테고리 패널 */}
         <CategorySidebar
           categories={SCOPE1_CATEGORIES}
           selectedId={selectedCategoryId}
           onSelect={setSelectedCategoryId}
         />
 
-        {/* 우측 메인 콘텐츠 */}
         <div className="space-y-6">
-          {/* 배출원 목록 + 예시 */}
-          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)]">
-            <SourceList
-              sources={visibleSources}
-              selectedSourceId={selectedSource?.id ?? ""}
-              onSelectSource={setSelectedSourceId}
+          <div className="grid gap-3 md:grid-cols-2 items-stretch">
+            <SourceInfoCard
+              rows={effectiveFacilities}
+              onRowsChange={setLocalFacilities}
+              selectedId={selectedFacilityId}
+              onSelect={setSelectedFacilityId}
+              onSave={handleSaveFacilities}
+              isSaving={saveFacilitiesMutation.isPending}
             />
-            <SourceExamples activeCategoryId={selectedCategoryId} />
+            <SourceReference activeCategoryId={selectedCategoryId} />
           </div>
 
-          {/* C. 월별 데이터 입력 테이블 */}
           <MonthlyActivityTable
-            activityByMonth={activityByMonth}
-            onChangeActivity={setActivityByMonth}
-            fuel={selectedSource?.fuelType ?? "LNG"}
-            unitLabel={selectedSource?.unit ?? "Nm3"}
+            activityByMonth={currentActivity}
+            onChangeActivity={handleActivityChange}
+            fuel={toFuelType(selectedFacility?.fuelName ?? "LNG")}
+            unitLabel={selectedFacility?.unit ?? "Nm3"}
+            facilityName={selectedFacility?.facilityName || "배출시설 미선택"}
             metaRight={
               <div className="flex items-center gap-3 text-xs whitespace-nowrap">
                 <div className="flex items-center gap-2">
@@ -97,13 +265,8 @@ export default function Scope1Page() {
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">
-                    데이터 상태
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="border-amber-300 bg-amber-50 text-amber-900"
-                  >
+                  <span className="font-medium text-foreground">데이터 상태</span>
+                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
                     Draft
                   </Badge>
                 </div>
@@ -111,65 +274,59 @@ export default function Scope1Page() {
             }
             headerRight={
               <div className="flex items-center gap-3 text-xs whitespace-nowrap">
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-1.5 py-0.5">
+                <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-1.5 py-0.5">
+                  {(["manual", "excel", "api"] as InputMode[]).map((mode) => (
                     <button
+                      key={mode}
                       type="button"
                       className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        inputMode === "manual"
+                        inputMode === mode
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:bg-muted"
                       }`}
-                      onClick={() => setInputMode("manual")}
+                      onClick={() => setInputMode(mode)}
                     >
-                      직접 입력
+                      {mode === "manual" ? "직접 입력" : mode === "excel" ? "Excel 업로드" : "API 연동"}
                     </button>
-                    <button
-                      type="button"
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        inputMode === "excel"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
-                      onClick={() => setInputMode("excel")}
-                    >
-                      Excel 업로드
-                    </button>
-                    <button
-                      type="button"
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        inputMode === "api"
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
-                      onClick={() => setInputMode("api")}
-                    >
-                      API 연동
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="cursor-pointer border-border/70 bg-background text-[11px] text-muted-foreground hover:bg-muted"
-                    >
-                      Excel 템플릿 다운로드
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="cursor-pointer text-[11px]"
-                    >
-                      Excel 업로드
-                    </Badge>
-                  </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={handleExcelUpload}
+                  />
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer border-border/70 bg-background text-[11px] text-muted-foreground hover:bg-muted"
+                    onClick={handleDownloadTemplate}
+                  >
+                    Excel 템플릿 다운로드
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer text-[11px]"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Excel 업로드
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={handleSaveActivity}
+                    disabled={saveActivityMutation.isPending}
+                    className="inline-flex items-center rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {saveActivityMutation.isPending ? "저장 중..." : "활동량 저장"}
+                  </button>
                 </div>
               </div>
             }
           />
 
-          {/* G. 하단 액션 바 - 월별 입력 바로 아래 */}
           <ActionFooter year={year} />
 
-          {/* D, E, F 섹션 */}
           <div className="grid gap-4 lg:grid-cols-2 items-stretch">
             <ValidationInsightsCard />
             <div className="h-full">
@@ -183,4 +340,3 @@ export default function Scope1Page() {
     </div>
   );
 }
-

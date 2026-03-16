@@ -13,12 +13,19 @@ import { ActionFooter } from "@/components/scope1/action-footer";
 import { EmissionTrendCard } from "@/components/scope1/emission-trend-card";
 import { SCOPE1_DEFAULT_TREND } from "@/lib/scope1-utils";
 import { Scope3CategorySidebar } from "@/components/scope3/category-sidebar";
+import {
+  Scope3SourceInfoCard,
+  INITIAL_SCOPE3_ROWS,
+  type Scope3FacilityRow,
+} from "@/components/scope3/source-info-card";
+import { Scope3SourceReference } from "@/components/scope3/source-reference";
 import type { Scope3CategoryConfig } from "@/components/emissions/scope3-monthly-input";
 import type {
   PurchasedGoodsActivity,
   DataEntryMode,
 } from "@/types/scope3-purchased";
 import type { AuditLogItem } from "@/types/scope1";
+import { useFacilities, useSaveFacilities } from "@/hooks/use-facilities";
 
 const MONTH_LABELS = [
   "1월",
@@ -602,322 +609,6 @@ const AUDIT_LOG_ITEMS: AuditLogItem[] = [
   },
 ];
 
-interface ActivityListProps {
-  activities: PurchasedGoodsActivity[];
-  activeCategoryId: string;
-  selectedId: string;
-  onSelect: (id: string) => void;
-  onClickAdd: () => void;
-}
-
-function ActivityList({
-  activities,
-  activeCategoryId,
-  selectedId,
-  onSelect,
-  onClickAdd,
-}: ActivityListProps) {
-  const description =
-    activeCategoryId === "u2"
-      ? "자본재(설비, 기계, 차량 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-      : activeCategoryId === "u3"
-        ? "연료·에너지 관련(기타) 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-        : activeCategoryId === "u5"
-          ? "사업장 폐기물(일반·재활용·위험 폐기물 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-          : activeCategoryId === "u4"
-            ? "상류 수송 및 유통 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-            : activeCategoryId === "u6"
-              ? "출장(육상 교통, 항공, 숙박 등)과 관련된 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-              : activeCategoryId === "u7"
-                ? "직원 출퇴근(자가용, 대중교통, 통근버스 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-          : activeCategoryId === "u8"
-            ? "상류 임차자산(사무실, 창고, 설비 등) 사용과 관련된 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-            : activeCategoryId === "d1"
-              ? "하류 수송 및 유통(제품 배송, 리테일 물류 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-              : activeCategoryId === "d2"
-                ? "판매제품 가공(부품 가공, 하도급 생산 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-                : activeCategoryId === "d3"
-                  ? "판매제품 사용(제품 사용 단계에서의 에너지·연료 사용 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-                  : activeCategoryId === "d4"
-                    ? "판매제품 폐기(재활용, 소각, 매립 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-                    : activeCategoryId === "d5"
-                      ? "하류 임차자산(리테일 매장, 물류센터, 차량 등) 사용과 관련된 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-                      : activeCategoryId === "d6"
-                        ? "프랜차이즈(가맹점 운영, 에너지 사용 등) 관련 활동 데이터를 추가하고 월별 활동량을 관리합니다."
-                        : activeCategoryId === "d7"
-                          ? "투자(주식·채권·프로젝트 파이낸싱 등) 포트폴리오에서 발생하는 배출 데이터를 추가하고 월별 활동량을 관리합니다."
-                          : "구매 상품 및 서비스 데이터를 추가하고 월별 활동량을 관리합니다.";
-
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-medium text-foreground">활동 데이터 목록</h2>
-          <p className="text-xs text-muted-foreground">
-            {description}
-          </p>
-        </div>
-        <Button size="sm" variant="outline" onClick={onClickAdd}>
-          + 활동 추가
-        </Button>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-              <th className="px-4 py-2 text-left font-medium">활동명</th>
-              <th className="px-4 py-2 text-left font-medium">공급사</th>
-              <th className="px-4 py-2 text-left font-medium">산정방식</th>
-              <th className="px-4 py-2 text-left font-medium">단위</th>
-              <th className="px-2 py-2 text-right font-medium">배출계수</th>
-              <th className="px-4 py-2 text-left font-medium">상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activities.map((activity) => {
-              const isSelected = activity.id === selectedId;
-              return (
-                <tr
-                  key={activity.id}
-                  onClick={() => onSelect(activity.id)}
-                  className={cn(
-                    "cursor-pointer border-b border-border/60 last:border-0 transition-colors",
-                    isSelected ? "bg-primary/5" : "hover:bg-muted/50",
-                  )}
-                >
-                  <td className="px-4 py-2 text-sm font-medium">
-                    {activity.name}
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground">
-                    {activity.supplier}
-                  </td>
-                  <td className="px-4 py-2 text-xs">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-                        activity.method === "Activity Based"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                          : activity.method === "Spend Based"
-                            ? "bg-sky-50 text-sky-700 border border-sky-100"
-                            : "bg-violet-50 text-violet-700 border border-violet-100",
-                      )}
-                    >
-                      {activity.method}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground">
-                    {activity.unit}
-                  </td>
-                  <td className="px-2 py-2 text-xs text-right text-muted-foreground">
-                    {activity.emissionFactor.toFixed(5)}
-                  </td>
-                  <td className="px-4 py-2 text-xs">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-                        activity.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                          : "bg-muted text-muted-foreground border border-border/50",
-                      )}
-                    >
-                      {activity.status === "active" ? "활성" : "비활성"}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function ExampleActivitiesCard({ categoryId }: { categoryId: string }) {
-  const isCapitalGoods = categoryId === "u2";
-  const isFuelEnergyOther = categoryId === "u3";
-  const isUpstreamTransport = categoryId === "u4";
-  const isSiteWaste = categoryId === "u5";
-  const isBusinessTravel = categoryId === "u6";
-  const isEmployeeCommute = categoryId === "u7";
-  const isUpstreamLeasedAssets = categoryId === "u8";
-  const isDownstreamTransport = categoryId === "d1";
-  const isDownstreamProcessing = categoryId === "d2";
-  const isDownstreamUse = categoryId === "d3";
-  const isDownstreamEndOfLife = categoryId === "d4";
-  const isDownstreamLeasedAssets = categoryId === "d5";
-  const isFranchise = categoryId === "d6";
-  const isInvestment = categoryId === "d7";
-
-  return (
-    <Card className="border-border/60 bg-card/80">
-      <CardContent className="py-3 text-xs">
-        <div className="mb-1 flex items-center justify-between">
-          <span className="font-medium text-foreground">예시 활동</span>
-          <span className="text-[11px] text-muted-foreground">
-            카테고리별 대표 예시
-          </span>
-        </div>
-        <p className="mb-2 text-[11px] text-muted-foreground">
-          {isCapitalGoods
-            ? "기계·설비, 건물, 차량 등 자본재 투자와 관련된 배출 데이터 예시입니다."
-            : isFuelEnergyOther
-              ? "연료·에너지 관련(기타) 카테고리에 속하는 연료 공급망 및 송배전 손실 등 간접 배출 데이터 예시입니다."
-              : isUpstreamTransport
-                ? "상류 수송 및 유통 과정(원자재 수입, 물류센터 이전 등)에서 발생하는 배출 데이터 예시입니다."
-                : isSiteWaste
-                  ? "사업장 내에서 발생하는 일반·재활용·위험 폐기물 처리와 관련된 배출 데이터 예시입니다."
-                  : isBusinessTravel
-                    ? "직원 출장(항공, 철도, 차량, 숙박 등)으로 인해 발생하는 배출 데이터 예시입니다."
-                    : isEmployeeCommute
-                      ? "직원 출퇴근(자가용, 대중교통, 통근버스 등)으로 인해 발생하는 배출 데이터 예시입니다."
-                      : isUpstreamLeasedAssets
-                        ? "상류 임차자산(사무실, 창고, 설비 등) 사용과 관련된 배출 데이터 예시입니다."
-                        : isDownstreamTransport
-                          ? "하류 수송 및 유통(제품 배송, 리테일 물류 등)에서 발생하는 배출 데이터 예시입니다."
-                          : isDownstreamProcessing
-                            ? "판매제품 가공(부품 가공, 하도급 생산 등)에서 발생하는 배출 데이터 예시입니다."
-                            : isDownstreamUse
-                              ? "판매제품 사용(제품 사용 단계에서의 에너지·연료 사용 등)에서 발생하는 배출 데이터 예시입니다."
-                              : isDownstreamEndOfLife
-                                ? "판매제품 폐기(재활용, 소각, 매립 등)에서 발생하는 배출 데이터 예시입니다."
-                                : isDownstreamLeasedAssets
-                                  ? "하류 임차자산(리테일 매장, 물류센터, 차량 등) 사용과 관련된 배출 데이터 예시입니다."
-                                  : isFranchise
-                                    ? "프랜차이즈(가맹점 매장 운영, 설비·조리 에너지 사용 등)에서 발생하는 배출 데이터 예시입니다."
-                                    : isInvestment
-                                      ? "투자 포트폴리오(주식·채권·프로젝트 파이낸싱 등)에서 발생하는 배출 데이터 예시입니다."
-                                      : "구매한 원재료, 부품, 포장재, 소모품, 외주 가공 서비스 등에서 발생하는 배출 데이터 예시입니다."}
-        </p>
-        <ul className="ml-4 list-disc space-y-0.5 text-[11px] text-muted-foreground">
-          {isCapitalGoods ? (
-            <>
-              <li>생산 설비 (Production Equipment)</li>
-              <li>건물 리트로핏 (Building Retrofit)</li>
-              <li>차량·장비 (Vehicle Fleet)</li>
-              <li>창고 랙 시스템 (Warehouse Racking System)</li>
-              <li>IT·네트워크 인프라 (IT &amp; Network Infrastructure)</li>
-            </>
-          ) : isFuelEnergyOther ? (
-            <>
-              <li>연료 전처리 공정 (Upstream Fuel Processing)</li>
-              <li>정제·수송 단계 배출 (Well-to-Tank Emissions)</li>
-              <li>송·배전 손실 (Transmission &amp; Distribution Losses)</li>
-              <li>에너지 저장 손실 (Energy Storage Losses)</li>
-              <li>계통 서비스 계약 (Grid Service Contracts)</li>
-            </>
-          ) : isUpstreamTransport ? (
-            <>
-              <li>원자재 해상 운송 (Ocean Freight for Raw Materials)</li>
-              <li>긴급 항공 운송 (Air Freight for Urgent Shipments)</li>
-              <li>공장 간 내륙 운송 (Domestic Trucking to Plants)</li>
-              <li>입고 창고 이동 (Inbound Warehouse Transfers)</li>
-              <li>컨테이너 운송 (Container Drayage)</li>
-            </>
-          ) : isSiteWaste ? (
-            <>
-              <li>사무실 일반폐기물 수거 (General Office Waste Collection)</li>
-              <li>생산 스크랩 재활용 (Production Scrap Recycling)</li>
-              <li>위험 폐기물 소각 (Hazardous Waste Incineration)</li>
-              <li>폐수 처리 슬러지 (On-site Wastewater Treatment Sludge)</li>
-              <li>외부 매립 위탁 (Contracted Landfill Disposal)</li>
-            </>
-          ) : isBusinessTravel ? (
-            <>
-              <li>국내 철도 출장 (Domestic Rail Travel)</li>
-              <li>단거리 항공편 (Short-haul Flights)</li>
-              <li>장거리 항공편 (Long-haul Flights)</li>
-              <li>호텔 숙박 (Hotel Nights)</li>
-              <li>렌터카 이용 (Rental Car Use)</li>
-            </>
-          ) : isEmployeeCommute ? (
-            <>
-              <li>자가용 출퇴근 (Single-occupancy Car Commute)</li>
-              <li>카풀 출퇴근 (Carpool Commute)</li>
-              <li>버스·지하철 출퇴근 (Bus &amp; Subway Commute)</li>
-              <li>회사 통근버스 (Company Shuttle Bus)</li>
-              <li>환승 주차장 이용 (Park-and-Ride Usage)</li>
-            </>
-          ) : isUpstreamLeasedAssets ? (
-            <>
-              <li>임차 사무실 층 (Leased Office Floors)</li>
-              <li>임차 창고 공간 (Leased Warehouse Space)</li>
-              <li>임차 생산 설비 (Leased Production Equipment)</li>
-              <li>임차 차량 (Leased Vehicle Fleet)</li>
-              <li>공유 오피스 (Shared Co-working Spaces)</li>
-            </>
-          ) : isDownstreamTransport ? (
-            <>
-              <li>제품 해상 운송 (Downstream Ocean Shipping)</li>
-              <li>매장 납품 (Retail Store Deliveries)</li>
-              <li>지역 물류센터 이동 (Regional Distribution Center Transfers)</li>
-              <li>라스트마일 배송 (Courier Last-mile Delivery)</li>
-              <li>반품·회수 물류 (Reverse Logistics for Returns)</li>
-            </>
-          ) : isDownstreamProcessing ? (
-            <>
-              <li>부품 가공 (Component Machining)</li>
-              <li>금속 프레스/스탬핑 (Metal Stamping)</li>
-              <li>플라스틱 사출성형 (Plastic Injection Molding)</li>
-              <li>전자 부품 조립 (Electronics Sub-assembly)</li>
-              <li>도장·코팅 공정 (Painting &amp; Coating)</li>
-            </>
-          ) : isDownstreamUse ? (
-            <>
-              <li>가전제품 전기사용 (Home Appliance Electricity Use)</li>
-              <li>산업설비 가동 (Industrial Equipment Runtime)</li>
-              <li>차량 연료 사용 (Vehicle Fuel Consumption)</li>
-              <li>전자제품 대기전력 (Consumer Electronics Standby Power)</li>
-              <li>상업용 냉난방 운전 (Commercial HVAC Operation)</li>
-            </>
-          ) : isDownstreamEndOfLife ? (
-            <>
-              <li>지자체 폐기물 처리 (Municipal Waste Disposal)</li>
-              <li>판매제품 재활용 (Recycling of Sold Products)</li>
-              <li>폐제품 매립 (Landfill of End-of-life Products)</li>
-              <li>에너지 회수 소각 (Energy-from-Waste Incineration)</li>
-              <li>회수·역물류 (Take-back &amp; Reverse Logistics)</li>
-            </>
-          ) : isDownstreamLeasedAssets ? (
-            <>
-              <li>임차 리테일 매장 (Leased Retail Stores)</li>
-              <li>임차 물류센터 (Leased Distribution Centers)</li>
-              <li>임차 배송 차량 (Leased Downstream Vehicle Fleet)</li>
-              <li>팝업 스토어 임대 (Pop-up Store Leases)</li>
-              <li>3자 보관창고 (Third-party Storage Units)</li>
-            </>
-          ) : isFranchise ? (
-            <>
-              <li>프랜차이즈 매장 전기사용 (Franchise Store Electricity Use)</li>
-              <li>조리용 가스 사용 (Gas Consumption for Cooking)</li>
-              <li>냉동·냉장 설비 부하 (Refrigeration &amp; Freezer Loads)</li>
-              <li>간판·조명 전력 (Franchise Signage &amp; Lighting)</li>
-              <li>브랜드 공용 설비 (Shared Brand-owned Equipment)</li>
-            </>
-          ) : isInvestment ? (
-            <>
-              <li>고배출 업종 지분투자 (Equity Investments in High-emitting Sectors)</li>
-              <li>인프라 프로젝트 파이낸싱 (Project Finance for Infrastructure)</li>
-              <li>기업채 투자 (Corporate Bond Investments)</li>
-              <li>그린·브라운 포트폴리오 전환 (Green vs. Brown Portfolio Shifts)</li>
-              <li>대출에 따른 파이낸스드 배출 (Financed Emissions from Loans)</li>
-            </>
-          ) : (
-            <>
-              <li>강판 구매 (Steel Coil)</li>
-              <li>플라스틱 수지 구매 (Plastic Resin)</li>
-              <li>포장재 (Packaging Material)</li>
-              <li>전자 부품 (Electronic Parts)</li>
-              <li>외주 가공 서비스 (Outsourced Processing)</li>
-            </>
-          )}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
-
 interface AddActivityModalProps {
   open: boolean;
   onClose: () => void;
@@ -1064,6 +755,43 @@ export default function Scope3Page() {
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  // 배출원 정보 상태 (DB 연동)
+  const { data: dbScope3Facilities } = useFacilities(3);
+  const saveFacilitiesMutation = useSaveFacilities(3, "");
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string>(
+    INITIAL_SCOPE3_ROWS[0]?.id ?? "",
+  );
+  const [localScope3Facilities, setLocalScope3Facilities] = useState<Scope3FacilityRow[]>([]);
+  const scope3Facilities: Scope3FacilityRow[] = useMemo(() => {
+    if (localScope3Facilities.length > 0) return localScope3Facilities;
+    if (dbScope3Facilities && dbScope3Facilities.length > 0) {
+      return dbScope3Facilities.map((r) => ({
+        id: r.id,
+        facilityName: r.facility_name,
+        activityType: r.activity_type ?? "구입상품·서비스",
+        unit: r.unit,
+        dataMethod: r.data_method,
+      }));
+    }
+    return INITIAL_SCOPE3_ROWS;
+  }, [localScope3Facilities, dbScope3Facilities]);
+  const selectedFacility = scope3Facilities.find((f) => f.id === selectedFacilityId);
+
+  const handleSaveScope3Facilities = (rows: Scope3FacilityRow[]) => {
+    saveFacilitiesMutation.mutate(rows.map((r, i) => ({
+      id: r.id,
+      scope: 3,
+      facility_name: r.facilityName,
+      fuel_type: null,
+      energy_type: null,
+      activity_type: r.activityType,
+      unit: r.unit,
+      data_method: r.dataMethod,
+      sort_order: i,
+    })));
+    setLocalScope3Facilities(rows);
+  };
+
   const filteredByCategory = activities.filter(
     (a) => (a.categoryId ?? "u1") === selectedCategoryId,
   );
@@ -1103,6 +831,13 @@ export default function Scope3Page() {
   );
 
   const totalEmission = emissions.reduce((sum, v) => sum + v, 0);
+
+  // CO₂ 95%, CH₄ 3%, N₂O 2% 비율로 가스별 배출량 산출
+  const gasEmissions = useMemo(() => ({
+    co2: emissions.map((v) => v * 0.95),
+    ch4: emissions.map((v) => v * 0.03),
+    n2o: emissions.map((v) => v * 0.02),
+  }), [emissions]);
 
   const handleActivityValueChange = (index: number, raw: string) => {
     const v = raw === "" ? 0 : parseFloat(raw);
@@ -1152,16 +887,17 @@ export default function Scope3Page() {
 
         {/* 우측 메인 콘텐츠 */}
         <div className="space-y-6">
-          {/* 상단 카드 영역 */}
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)]">
-            <ActivityList
-              activities={visibleActivities}
-              activeCategoryId={selectedCategoryId}
-              selectedId={selectedActivity?.id ?? ""}
-              onSelect={setSelectedActivityId}
-              onClickAdd={() => setIsAddModalOpen(true)}
+          {/* 배출원 정보 + 배출원 목록 */}
+          <div className="grid gap-3 md:grid-cols-2 items-stretch">
+            <Scope3SourceInfoCard
+              rows={scope3Facilities}
+              onRowsChange={setLocalScope3Facilities}
+              selectedId={selectedFacilityId}
+              onSelect={setSelectedFacilityId}
+              onSave={handleSaveScope3Facilities}
+              isSaving={saveFacilitiesMutation.isPending}
             />
-            <ExampleActivitiesCard categoryId={selectedCategoryId} />
+            <Scope3SourceReference activeCategoryId={selectedCategoryId} />
           </div>
 
           {/* 월별 입력 영역 */}
@@ -1171,8 +907,12 @@ export default function Scope3Page() {
                 <h2 className="text-sm font-medium text-foreground">
                   월별 활동량 입력
                 </h2>
+                {selectedFacility?.facilityName && (
+                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    {selectedFacility.facilityName}
+                  </span>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  선택된 활동 기준으로 월별 활동량과 배출량을 관리합니다.
                 </p>
                 <div className="flex items-center gap-3 text-xs whitespace-nowrap">
                   <div className="flex items-center gap-2">
@@ -1253,15 +993,45 @@ export default function Scope3Page() {
               </div>
             </div>
 
+            {/* 계산 근거 */}
+            {selectedActivity && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs dark:border-blue-900/50 dark:bg-blue-950/20">
+                <span className="shrink-0 font-semibold text-blue-700 dark:text-blue-400">계산 근거</span>
+                <span className="shrink-0 text-muted-foreground">
+                  활동량
+                  <span className="mx-1 text-muted-foreground/60">({selectedActivity.unit})</span>
+                  <span className="mx-1.5 text-foreground">×</span>
+                  배출계수
+                  <span className="mx-1 rounded bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                    {emissionFactor.toFixed(5)} tCO₂e/{selectedActivity.unit}
+                  </span>
+                  <span className="mx-1.5 text-foreground">=</span>
+                  배출량
+                  <span className="ml-1 text-muted-foreground/60">(tCO₂e)</span>
+                </span>
+                <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+                <span className="text-muted-foreground">CO₂: <span className="ml-1 font-medium text-foreground">95%</span></span>
+                <span className="text-muted-foreground">CH₄: <span className="ml-1 font-medium text-foreground">3%</span></span>
+                <span className="text-muted-foreground">N₂O: <span className="ml-1 font-medium text-foreground">2%</span></span>
+                <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+                <span className="text-muted-foreground">
+                  출처:
+                  <span className="ml-1 text-foreground">
+                    {selectedActivity.source ?? SCOPE3_CATEGORIES.find((c) => c.id === selectedCategoryId)?.factorSource ?? "-"}
+                  </span>
+                </span>
+              </div>
+            )}
+
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
-              <table className="w-full min-w-[800px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-                    <th className="w-28 px-3 py-2 text-left font-medium">구분</th>
+                    <th className="w-24 px-3 py-2 text-left font-medium">구분</th>
                     {MONTH_LABELS.map((label) => (
                       <th
                         key={label}
-                        className="w-20 px-2 py-2 text-right font-medium"
+                        className="px-1 py-2 text-right font-medium"
                       >
                         {label}
                       </th>
@@ -1280,7 +1050,7 @@ export default function Scope3Page() {
                         : undefined}
                     </td>
                     {MONTH_LABELS.map((_, idx) => (
-                      <td key={idx} className="px-2 py-2 text-right">
+                      <td key={idx} className="px-1 py-2 text-right">
                         <input
                           type="number"
                           min={0}
@@ -1290,8 +1060,9 @@ export default function Scope3Page() {
                             handleActivityValueChange(idx, e.target.value)
                           }
                           className={cn(
-                            "h-9 w-full min-w-[4rem] rounded-md border border-input bg-transparent px-2 py-1.5 text-right text-xs ring-offset-background",
+                            "h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-1 py-1 text-right text-xs ring-offset-background",
                             "focus:outline-none focus:ring-1 focus:ring-ring",
+                            "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                           )}
                         />
                       </td>
@@ -1306,7 +1077,7 @@ export default function Scope3Page() {
                       )}
                     </td>
                   </tr>
-                  <tr>
+                  <tr className="border-b border-border/60">
                     <td className="px-3 py-2 text-xs font-medium">
                       배출량 (tCO₂e)
                     </td>
@@ -1317,6 +1088,39 @@ export default function Scope3Page() {
                     ))}
                     <td className="px-3 py-2 text-right text-xs font-semibold">
                       {formatNumber(totalEmission, 2)} tCO₂e
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border/60 bg-muted/20">
+                    <td className="px-3 py-2 text-xs text-muted-foreground pl-5">CO₂ (tCO₂)</td>
+                    {gasEmissions.co2.map((v, idx) => (
+                      <td key={idx} className="px-2 py-2 text-right text-xs text-muted-foreground">
+                        {formatNumber(v, 3)}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                      {formatNumber(gasEmissions.co2.reduce((s, v) => s + v, 0), 3)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border/60 bg-muted/20">
+                    <td className="px-3 py-2 text-xs text-muted-foreground pl-5">CH₄ (tCH₄)</td>
+                    {gasEmissions.ch4.map((v, idx) => (
+                      <td key={idx} className="px-2 py-2 text-right text-xs text-muted-foreground">
+                        {formatNumber(v, 3)}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                      {formatNumber(gasEmissions.ch4.reduce((s, v) => s + v, 0), 3)}
+                    </td>
+                  </tr>
+                  <tr className="bg-muted/20">
+                    <td className="px-3 py-2 text-xs text-muted-foreground pl-5">N₂O (tN₂O)</td>
+                    {gasEmissions.n2o.map((v, idx) => (
+                      <td key={idx} className="px-2 py-2 text-right text-xs text-muted-foreground">
+                        {formatNumber(v, 3)}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">
+                      {formatNumber(gasEmissions.n2o.reduce((s, v) => s + v, 0), 3)}
                     </td>
                   </tr>
                 </tbody>
