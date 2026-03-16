@@ -37,6 +37,8 @@ export function Scope3CommutingInput({
   factor,
   onFactorChange,
 }: Scope3CommutingInputProps) {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
   const queryClient = useQueryClient();
   const { data: roster = [], isLoading: rosterLoading } = useQuery({
     queryKey: ["employee-roster"],
@@ -226,9 +228,9 @@ export function Scope3CommutingInput({
               onChange={(e) => onYearChange(e.target.value)}
               className="h-9 w-[120px] rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             >
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
           </div>
           <div className="space-y-1 text-sm">

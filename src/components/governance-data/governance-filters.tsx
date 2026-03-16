@@ -12,6 +12,9 @@ import { Search, RotateCcw, Download, Plus } from "lucide-react";
 
 /** 거버넌스 데이터 필터 바 */
 export function GovernanceFilters() {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4">
       <div className="flex min-w-[200px] flex-1 items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm">
@@ -22,13 +25,14 @@ export function GovernanceFilters() {
           className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
         />
       </div>
-      <Select defaultValue="2024">
+      <Select defaultValue={years[0]}>
         <SelectTrigger className="w-[100px]">
           <SelectValue placeholder="연도" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="2024">2024</SelectItem>
-          <SelectItem value="2023">2023</SelectItem>
+          {years.map((y) => (
+            <SelectItem key={y} value={y}>{y}</SelectItem>
+          ))}
         </SelectContent>
       </Select>
       <Select defaultValue="all">

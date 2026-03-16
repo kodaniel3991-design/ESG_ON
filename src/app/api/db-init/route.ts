@@ -50,7 +50,24 @@ export async function POST() {
       );
     `);
 
-    // 3. 배출원 목록 테이블
+    // 3. 첨부파일 테이블
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'activity_attachments')
+      CREATE TABLE activity_attachments (
+        id           INT            NOT NULL IDENTITY(1,1) PRIMARY KEY,
+        facility_id  NVARCHAR(50)   NOT NULL
+                       REFERENCES emission_facilities(id) ON DELETE CASCADE,
+        year         INT            NOT NULL,
+        month        INT            NOT NULL CHECK (month BETWEEN 1 AND 12),
+        file_name    NVARCHAR(500)  NOT NULL,
+        file_type    NVARCHAR(200)  NOT NULL,
+        file_size    INT            NOT NULL,
+        file_data    VARBINARY(MAX) NOT NULL,
+        created_at   DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // 4. 배출원 목록 테이블
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'emission_references')
       CREATE TABLE emission_references (
@@ -550,6 +567,7 @@ export async function POST() {
       tables: [
         "emission_facilities",
         "activity_data",
+        "activity_attachments",
         "emission_references",
         "emission_factor_source",
         "emission_factor_master",

@@ -48,7 +48,9 @@ function scope2ToDbRows(rows: Scope2FacilityRow[]): DbFacilityRow[] {
 }
 
 export default function Scope2Page() {
-  const [year, setYear] = useState("2024");
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+  const [year, setYear] = useState(String(currentYear));
   const [inputMode, setInputMode] = useState<InputMode>("manual");
   const [selectedCategoryId, setSelectedCategoryId] = useState<Scope2CategoryId>("electricity");
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>(
@@ -124,6 +126,8 @@ export default function Scope2Page() {
             energyType={(selectedFacility?.energyType === "Electricity" ? "Electricity" : "Steam") as any}
             unitLabel={selectedFacility?.unit ?? "MWh"}
             facilityName={selectedFacility?.facilityName || "배출시설 미선택"}
+            facilityId={selectedFacilityId}
+            year={year}
             activityByMonth={currentActivity}
             onChangeActivity={handleActivityChange}
             metaRight={
@@ -135,9 +139,9 @@ export default function Scope2Page() {
                     onChange={(e) => setYear(e.target.value)}
                     className="h-8 w-[110px] rounded-md border border-input bg-transparent px-3 py-1 text-xs"
                   >
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                    <option value="2022">2022</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex items-center gap-2">

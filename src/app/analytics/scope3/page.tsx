@@ -738,7 +738,9 @@ function AddActivityModal({ open, onClose, onSave }: AddActivityModalProps) {
 }
 
 export default function Scope3Page() {
-  const [year, setYear] = useState("2024");
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+  const [year, setYear] = useState(String(currentYear));
   const [mode, setMode] = useState<DataEntryMode>("manual");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("u1");
   const [activities, setActivities] =
@@ -922,9 +924,9 @@ export default function Scope3Page() {
                       onChange={(e) => setYear(e.target.value)}
                       className="h-8 w-[110px] rounded-md border border-input bg-transparent px-3 py-1 text-xs"
                     >
-                      <option value="2024">2024</option>
-                      <option value="2023">2023</option>
-                      <option value="2022">2022</option>
+                      {years.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex items-center gap-2">

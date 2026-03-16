@@ -14,6 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Download } from "lucide-react";
 
 export default function ReportGenerationPage() {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
   const { data: templates, isLoading: tLoading } = useQuery({
     queryKey: ["report-templates"],
     queryFn: getReportTemplates,
@@ -59,8 +61,9 @@ export default function ReportGenerationPage() {
                     보고 기간
                   </p>
                   <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-                    <option>FY 2024</option>
-                    <option>FY 2023</option>
+                    {years.map((y) => (
+                      <option key={y}>{`FY ${y}`}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

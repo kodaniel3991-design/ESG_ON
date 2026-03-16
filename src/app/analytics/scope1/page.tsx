@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import { ScopeHeader } from "@/components/scope1/scope-header";
 import { CategorySidebar } from "@/components/scope1/category-sidebar";
@@ -20,7 +21,7 @@ import {
   SCOPE1_CATEGORIES,
 } from "@/lib/scope1-mock-data";
 import type { Scope1FuelType, ScopeCategoryId } from "@/types/scope1";
-import { SCOPE1_DEFAULT_TREND } from "@/lib/scope1-utils";
+import { calculateMonthlyEmissions } from "@/lib/scope1-utils";
 import { Badge } from "@/components/ui/badge";
 import { useFacilities, useSaveFacilities, type DbFacilityRow } from "@/hooks/use-facilities";
 import { useActivity, useSaveActivity } from "@/hooks/use-activity";
@@ -63,7 +64,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function Scope1Page() {
-  const [year, setYear] = useState("2024");
+  const queryClient = useQueryClient();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+  const [year, setYear] = useState(String(currentYear));
   const [inputMode, setInputMode] = useState<InputMode>("manual");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<ScopeCategoryId>("fixed");
@@ -83,18 +87,28 @@ export default function Scope1Page() {
     [dbFacilities, selectedCategoryId],
   );
   const [localFacilities, setLocalFacilities] = useState<FacilityRow[]>([]);
+  const [localActivity, setLocalActivity] = useState<Record<string, number[]>>({});
 
+  // 카테고리 전환 시 선택 시설·로컬 편집 초기화
   useEffect(() => {
     setSelectedFacilityId("");
     setLocalFacilities([]);
+    setLocalActivity({});
   }, [selectedCategoryId]);
 
   const effectiveFacilities = localFacilities.length > 0 ? localFacilities : facilities;
 
+  // DB 시설 목록이 바뀌었을 때, 현재 선택된 ID가 목록에 없으면 첫 번째로 자동 선택
+  useEffect(() => {
+    setSelectedFacilityId((prev) => {
+      const valid = effectiveFacilities.some((f) => f.id === prev);
+      return valid ? prev : (effectiveFacilities[0]?.id ?? "");
+    });
+  }, [effectiveFacilities]);
+
   // DB에서 월별 활동량 로드
   const { data: dbActivity } = useActivity(selectedFacilityId, year);
   const saveActivityMutation = useSaveActivity();
-  const [localActivity, setLocalActivity] = useState<Record<string, number[]>>({});
 
   const currentActivity = useMemo(() => {
     if (localActivity[selectedFacilityId]) return localActivity[selectedFacilityId];
@@ -125,23 +139,29 @@ export default function Scope1Page() {
     setLocalFacilities(rows);
   };
 
-  // ── Excel 템플릿 다운로드 ──────────────────────────────────────
-  const handleDownloadTemplate = () => {
+  // ── Excel 템플릿 다운로드 (전체 시설 DB 값 포함) ──────────────
+  const handleDownloadTemplate = async () => {
     const categoryLabel = CATEGORY_LABELS[selectedCategoryId] ?? selectedCategoryId;
     const header = ["연도", "카테고리", "시설명", "연료", "단위", ...MONTH_LABELS];
 
-    const dataRows = effectiveFacilities.map((f) => {
-      const activity = localActivity[f.id] ??
-        (selectedFacilityId === f.id && dbActivity ? dbActivity : Array(12).fill(0));
-      return [year, categoryLabel, f.facilityName, f.fuelName, f.unit, ...activity];
-    });
+    // 전체 시설의 활동량을 DB에서 가져옴
+    const allActivity = await Promise.all(
+      effectiveFacilities.map(async (f) => {
+        if (localActivity[f.id]) return localActivity[f.id];
+        try {
+          const res = await fetch(`/api/activity?facilityId=${f.id}&year=${year}`);
+          if (res.ok) return ((await res.json()) as { values: number[] }).values;
+        } catch {}
+        return Array(12).fill(0);
+      })
+    );
 
-    // 안내 주석 행 포함
     const noteRow = ["※ 활동량(숫자)만 수정하세요. 연도·시설명·연료·단위는 변경하지 마세요."];
+    const dataRows = effectiveFacilities.map((f, i) => [
+      year, categoryLabel, f.facilityName, f.fuelName, f.unit, ...allActivity[i],
+    ]);
 
     const ws = XLSX.utils.aoa_to_sheet([noteRow, header, ...dataRows]);
-
-    // 열 너비 설정
     ws["!cols"] = [
       { wch: 6 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 6 },
       ...Array(12).fill({ wch: 8 }),
@@ -152,19 +172,18 @@ export default function Scope1Page() {
     XLSX.writeFile(wb, `Scope1_${categoryLabel}_월별활동량_${year}.xlsx`);
   };
 
-  // ── Excel 업로드 파싱 ─────────────────────────────────────────
+  // ── Excel 업로드 파싱 → 전체 시설 즉시 DB 저장 ──────────────
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const wb = XLSX.read(evt.target?.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 }) as (string | number)[][];
 
-        // 첫 행이 안내 주석이면 건너뜀, 헤더 행 찾기
         const headerRowIdx = rows.findIndex(
           (r) => String(r[0]).trim() === "연도" || String(r[1]).trim() === "카테고리",
         );
@@ -175,6 +194,7 @@ export default function Scope1Page() {
 
         const header = rows[headerRowIdx].map((h) => String(h).trim());
         const nameIdx = header.indexOf("시설명");
+        const fuelIdx = header.indexOf("연료");
         const monthStartIdx = header.indexOf("1월");
 
         if (nameIdx === -1 || monthStartIdx === -1) {
@@ -182,13 +202,20 @@ export default function Scope1Page() {
           return;
         }
 
-        const newActivity: Record<string, number[]> = { ...localActivity };
-        let matched = 0;
+        const matched: { facilityId: string; values: number[] }[] = [];
 
         for (const row of rows.slice(headerRowIdx + 1)) {
           if (!row[nameIdx]) continue;
           const facilityName = String(row[nameIdx]).trim();
-          const facility = effectiveFacilities.find((f) => f.facilityName === facilityName);
+          const fuelName = fuelIdx !== -1 ? String(row[fuelIdx] ?? "").trim() : "";
+
+          // 시설명 + 연료 조합으로 우선 매칭, 없으면 시설명만으로 매칭
+          const facility =
+            fuelName
+              ? (effectiveFacilities.find(
+                  (f) => f.facilityName === facilityName && f.fuelName === fuelName,
+                ) ?? effectiveFacilities.find((f) => f.facilityName === facilityName))
+              : effectiveFacilities.find((f) => f.facilityName === facilityName);
           if (!facility) continue;
 
           const values = Array.from({ length: 12 }, (_, i) => {
@@ -196,19 +223,44 @@ export default function Scope1Page() {
             const n = typeof v === "number" ? v : parseFloat(String(v ?? "0"));
             return Number.isNaN(n) ? 0 : Math.round(n * 1000) / 1000;
           });
-          newActivity[facility.id] = values;
-          matched++;
+          matched.push({ facilityId: facility.id, values });
         }
 
-        if (matched === 0) {
+        if (matched.length === 0) {
           alert("일치하는 시설명을 찾지 못했습니다.\n템플릿의 시설명이 현재 등록된 시설과 일치해야 합니다.");
+          return;
+        }
+
+        // 1. 로컬 상태 즉시 반영 (UI 즉시 표시)
+        const newActivity: Record<string, number[]> = { ...localActivity };
+        matched.forEach(({ facilityId, values }) => { newActivity[facilityId] = values; });
+        setLocalActivity(newActivity);
+        if (!selectedFacilityId && effectiveFacilities[0]) {
+          setSelectedFacilityId(effectiveFacilities[0].id);
+        }
+
+        // 2. 전체 시설 DB 일괄 저장
+        const results = await Promise.allSettled(
+          matched.map(({ facilityId, values }) =>
+            fetch("/api/activity", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ facilityId, year: parseInt(year), values }),
+            })
+          )
+        );
+
+        // 3. 저장된 시설 캐시 무효화
+        matched.forEach(({ facilityId }) => {
+          queryClient.invalidateQueries({ queryKey: ["activity", facilityId, year] });
+        });
+
+        const savedCount = results.filter((r) => r.status === "fulfilled").length;
+        const failCount = results.length - savedCount;
+        if (failCount > 0) {
+          alert(`${savedCount}개 저장 완료, ${failCount}개 저장 실패.\n네트워크 오류를 확인하세요.`);
         } else {
-          setLocalActivity(newActivity);
-          // 업로드 후 첫 시설 자동 선택
-          if (!selectedFacilityId && effectiveFacilities[0]) {
-            setSelectedFacilityId(effectiveFacilities[0].id);
-          }
-          alert(`${matched}개 시설의 활동량이 반영됐습니다.\n확인 후 "활동량 저장" 버튼을 눌러 저장하세요.`);
+          alert(`${savedCount}개 시설의 활동량이 저장됐습니다.`);
         }
       } catch {
         alert("파일을 읽는 중 오류가 발생했습니다.");
@@ -218,7 +270,10 @@ export default function Scope1Page() {
     e.target.value = "";
   };
 
-  const monthlyTotals = SCOPE1_DEFAULT_TREND;
+  const monthlyTotals = useMemo(
+    () => calculateMonthlyEmissions(currentActivity, toFuelType(selectedFacility?.fuelName ?? "LNG")).map((r) => r.emission),
+    [currentActivity, selectedFacility],
+  );
 
   return (
     <div className="space-y-4">
@@ -250,6 +305,8 @@ export default function Scope1Page() {
             fuel={toFuelType(selectedFacility?.fuelName ?? "LNG")}
             unitLabel={selectedFacility?.unit ?? "Nm3"}
             facilityName={selectedFacility?.facilityName || "배출시설 미선택"}
+            facilityId={selectedFacilityId}
+            year={year}
             metaRight={
               <div className="flex items-center gap-3 text-xs whitespace-nowrap">
                 <div className="flex items-center gap-2">
@@ -259,9 +316,9 @@ export default function Scope1Page() {
                     onChange={(e) => setYear(e.target.value)}
                     className="h-8 w-[110px] rounded-md border border-input bg-transparent px-3 py-1 text-xs"
                   >
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                    <option value="2022">2022</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex items-center gap-2">

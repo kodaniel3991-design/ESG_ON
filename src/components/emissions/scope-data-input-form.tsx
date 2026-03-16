@@ -26,7 +26,9 @@ export function ScopeDataInputForm({
       {} as Record<string, number>
     )
   );
-  const [period, setPeriod] = useState("2024");
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => String(currentYear - i));
+  const [period, setPeriod] = useState(String(currentYear));
   const [saved, setSaved] = useState(false);
 
   const total = Object.values(values).reduce((sum, v) => sum + (Number.isNaN(v) ? 0 : v), 0);
@@ -65,9 +67,9 @@ export function ScopeDataInputForm({
               onChange={(e) => setPeriod(e.target.value)}
               className="h-9 w-[120px] rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             >
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
           </div>
         </div>
