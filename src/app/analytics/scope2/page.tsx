@@ -118,6 +118,7 @@ export default function Scope2Page() {
               onSelect={setSelectedFacilityId}
               onSave={handleSaveFacilities}
               isSaving={saveFacilitiesMutation.isPending}
+              savedFromDb={!!dbFacilities && dbFacilities.length > 0}
             />
             <Scope2SourceExamples activeCategoryId={selectedCategoryId} />
           </div>

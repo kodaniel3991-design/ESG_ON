@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -38,6 +38,7 @@ interface U7SourceInfoCardProps {
   onSave?: (rows: U7FacilityRow[]) => void;
   isSaving?: boolean;
   worksites?: WorksiteItem[];
+  savedFromDb?: boolean;
 }
 
 export function U7SourceInfoCard({
@@ -48,8 +49,13 @@ export function U7SourceInfoCard({
   onSave,
   isSaving = false,
   worksites = [],
+  savedFromDb = false,
 }: U7SourceInfoCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (savedFromDb) setIsSaved(true);
+  }, [savedFromDb]);
 
   const updateRow = (id: string, field: keyof U7FacilityRow, value: string) => {
     onRowsChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));

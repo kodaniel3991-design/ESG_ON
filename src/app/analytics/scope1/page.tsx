@@ -291,6 +291,7 @@ export default function Scope1Page() {
             <SourceInfoCard
               rows={effectiveFacilities}
               onRowsChange={setLocalFacilities}
+              savedFromDb={!!dbFacilities && dbFacilities.length > 0}
               selectedId={selectedFacilityId}
               onSelect={setSelectedFacilityId}
               onSave={handleSaveFacilities}

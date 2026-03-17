@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -46,6 +46,11 @@ interface Scope3SourceInfoCardProps {
   onSelect: (id: string) => void;
   onSave?: (rows: Scope3FacilityRow[]) => void;
   isSaving?: boolean;
+  /** true이면 편집/저장/삭제 버튼을 숨기고 읽기 전용으로 표시 */
+  readonly?: boolean;
+  /** 읽기 전용 모드에서 헤더 설명 텍스트 */
+  readonlyDescription?: string;
+  savedFromDb?: boolean;
 }
 
 export function Scope3SourceInfoCard({
@@ -55,8 +60,15 @@ export function Scope3SourceInfoCard({
   onSelect,
   onSave,
   isSaving = false,
+  readonly = false,
+  readonlyDescription,
+  savedFromDb = false,
 }: Scope3SourceInfoCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (savedFromDb) setIsSaved(true);
+  }, [savedFromDb]);
 
   const updateRow = (id: string, field: keyof Scope3FacilityRow, value: string) => {
     onRowsChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
@@ -88,30 +100,32 @@ export function Scope3SourceInfoCard({
         <div>
           <h2 className="text-sm font-medium text-foreground">배출원 정보</h2>
           <p className="text-xs text-muted-foreground">
-            배출시설을 선택하면 해당 시설의 월별 데이터를 입력할 수 있습니다.
+            {readonlyDescription ?? "배출시설을 선택하면 해당 시설의 월별 데이터를 입력할 수 있습니다."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {isSaved ? (
-            <Button size="sm" variant="outline" onClick={() => setIsSaved(false)}>
-              수정
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => { setIsSaved(true); onSave?.(rows); }}
-              disabled={rows.length === 0 || isSaving}
-            >
-              {isSaving ? "저장 중..." : "저장"}
-            </Button>
-          )}
-          {!isSaved && (
-            <Button size="sm" variant="outline" onClick={addRow}>
-              + 행 추가
-            </Button>
-          )}
-        </div>
+        {!readonly && (
+          <div className="flex items-center gap-2">
+            {isSaved ? (
+              <Button size="sm" variant="outline" onClick={() => setIsSaved(false)}>
+                수정
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => { setIsSaved(true); onSave?.(rows); }}
+                disabled={rows.length === 0 || isSaving}
+              >
+                {isSaving ? "저장 중..." : "저장"}
+              </Button>
+            )}
+            {!isSaved && (
+              <Button size="sm" variant="outline" onClick={addRow}>
+                + 행 추가
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card">
@@ -146,7 +160,7 @@ export function Scope3SourceInfoCard({
                   >
                     {/* 배출시설명 */}
                     <td className="px-2 py-1.5" onClick={() => onSelect(row.id)}>
-                      {isSaved ? (
+                      {(readonly || isSaved) ? (
                         <span className="block px-2 py-1.5 text-xs">{row.facilityName || "—"}</span>
                       ) : (
                         <input
@@ -163,7 +177,7 @@ export function Scope3SourceInfoCard({
                     </td>
                     {/* 활동 유형 */}
                     <td className="px-2 py-1.5" onClick={() => onSelect(row.id)}>
-                      {isSaved ? (
+                      {(readonly || isSaved) ? (
                         <span className="block px-2 py-1.5 text-xs text-muted-foreground">{row.activityType}</span>
                       ) : (
                         <select
@@ -177,7 +191,7 @@ export function Scope3SourceInfoCard({
                     </td>
                     {/* 단위 */}
                     <td className="px-2 py-1.5" onClick={() => onSelect(row.id)}>
-                      {isSaved ? (
+                      {(readonly || isSaved) ? (
                         <span className="block px-2 py-1.5 text-xs text-muted-foreground">{row.unit}</span>
                       ) : (
                         <select
@@ -191,7 +205,7 @@ export function Scope3SourceInfoCard({
                     </td>
                     {/* 자료 수집방법 */}
                     <td className="px-2 py-1.5" onClick={() => onSelect(row.id)}>
-                      {isSaved ? (
+                      {(readonly || isSaved) ? (
                         <span className="block px-2 py-1.5 text-xs text-muted-foreground">{row.dataMethod}</span>
                       ) : (
                         <select
@@ -204,7 +218,7 @@ export function Scope3SourceInfoCard({
                       )}
                     </td>
                     {/* 삭제 */}
-                    {!isSaved && (
+                    {!readonly && !isSaved && (
                       <td className="px-2 py-1.5 text-center" onClick={() => onSelect(row.id)}>
                         <button
                           type="button"

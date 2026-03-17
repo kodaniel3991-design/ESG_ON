@@ -605,7 +605,7 @@ export default function SettingsEmployeeRosterPage() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1200px] text-sm">
+                  <table className="w-full min-w-[1200px] text-[12px]">
                     <thead>
                       <tr className="border-b border-border text-left text-muted-foreground">
                         <th className="w-24 pb-2 pr-2 font-medium">부서</th>
@@ -631,21 +631,21 @@ export default function SettingsEmployeeRosterPage() {
                             {isEditing ? (
                               <input type="text" value={emp.department ?? ""} onChange={(e) => handleChange(emp.id, "department", e.target.value)} placeholder="부서" className={inputClass} />
                             ) : (
-                              <span className="text-sm">{emp.department || "-"}</span>
+                              <span className="text-[12px]">{emp.department || "-"}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
                               <input type="text" value={emp.name} onChange={(e) => handleChange(emp.id, "name", e.target.value)} placeholder="이름" className={inputClass} />
                             ) : (
-                              <span className="text-sm font-medium">{emp.name}</span>
+                              <span className="text-[12px] font-medium">{emp.name}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
                               <input type="text" value={emp.employeeId ?? ""} onChange={(e) => handleChange(emp.id, "employeeId", e.target.value)} placeholder="사원번호" className={inputClass} />
                             ) : (
-                              <span className="text-sm">{emp.employeeId || "-"}</span>
+                              <span className="text-[12px]">{emp.employeeId || "-"}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2">
@@ -657,21 +657,21 @@ export default function SettingsEmployeeRosterPage() {
                                 ))}
                               </select>
                             ) : (
-                              <span className="text-sm">{transportLabel || "-"}</span>
+                              <span className="text-[12px]">{transportLabel || "-"}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
                               <input type="text" value={emp.fuel ?? ""} onChange={(e) => handleChange(emp.id, "fuel", e.target.value)} placeholder="연료" className={inputClass} />
                             ) : (
-                              <span className="text-sm">{emp.fuel || "-"}</span>
+                              <span className="text-[12px]">{emp.fuel || "-"}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
                               <input type="text" value={emp.address ?? ""} onChange={(e) => handleChange(emp.id, "address", e.target.value)} placeholder="주소" className={inputClass} />
                             ) : (
-                              <span className="text-sm">{emp.address || "-"}</span>
+                              <span className="text-[12px]">{emp.address || "-"}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2 text-right">
@@ -694,7 +694,7 @@ export default function SettingsEmployeeRosterPage() {
                                 style={{ width: 80 }}
                               />
                             ) : (
-                              <span className="text-sm font-medium">
+                              <span className="text-[12px] font-medium">
                                 {emp.commuteDistanceKm != null ? emp.commuteDistanceKm.toFixed(2) : "-"}
                               </span>
                             )}

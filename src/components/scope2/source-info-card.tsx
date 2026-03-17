@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -36,6 +36,7 @@ interface Scope2SourceInfoCardProps {
   onSelect: (id: string) => void;
   onSave?: (rows: Scope2FacilityRow[]) => void;
   isSaving?: boolean;
+  savedFromDb?: boolean;
 }
 
 export function Scope2SourceInfoCard({
@@ -45,8 +46,13 @@ export function Scope2SourceInfoCard({
   onSelect,
   onSave,
   isSaving = false,
+  savedFromDb = false,
 }: Scope2SourceInfoCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (savedFromDb) setIsSaved(true);
+  }, [savedFromDb]);
 
   const updateRow = (id: string, field: keyof Scope2FacilityRow, value: string) => {
     onRowsChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));

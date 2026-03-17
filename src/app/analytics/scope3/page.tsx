@@ -12,7 +12,6 @@ import { ValidationInsightsCard } from "@/components/scope1/validation-insights-
 import { AuditLogTable } from "@/components/scope1/audit-log-table";
 import { ActionFooter } from "@/components/scope1/action-footer";
 import { EmissionTrendCard } from "@/components/scope1/emission-trend-card";
-import { SCOPE1_DEFAULT_TREND } from "@/lib/scope1-utils";
 import { Scope3CategorySidebar } from "@/components/scope3/category-sidebar";
 import {
   Scope3SourceInfoCard,
@@ -1118,6 +1117,7 @@ export default function Scope3Page() {
                 onSave={handleSaveU7Facilities}
                 isSaving={saveFacilitiesMutation.isPending}
                 worksites={worksites}
+                savedFromDb={!!dbScope3Facilities && dbScope3Facilities.length > 0}
               />
             ) : (
               <Scope3SourceInfoCard
@@ -1127,6 +1127,7 @@ export default function Scope3Page() {
                 onSelect={setSelectedFacilityId}
                 onSave={handleSaveScope3Facilities}
                 isSaving={saveFacilitiesMutation.isPending}
+                savedFromDb={!!dbScope3Facilities && dbScope3Facilities.length > 0}
               />
             )}
             <Scope3SourceReference activeCategoryId={selectedCategoryId} />
@@ -1479,7 +1480,10 @@ export default function Scope3Page() {
           </div>
 
       {/* Emission Trend (Scope 1/2와 동일 스타일) */}
-      <EmissionTrendCard monthlyTotals={SCOPE1_DEFAULT_TREND} />
+      <EmissionTrendCard
+        monthlyTotals={isU7 ? u7MonthlyEmissions : emissions}
+        label="Scope 3"
+      />
         </div>
       </div>
 

@@ -7,9 +7,10 @@ const MONTH_LABELS = ["1월","2월","3월","4월","5월","6월","7월","8월","9
 
 interface EmissionTrendCardProps {
   monthlyTotals: number[]; // length 12
+  label?: string; // e.g. "Scope 1", "Scope 3"
 }
 
-export function EmissionTrendCard({ monthlyTotals }: EmissionTrendCardProps) {
+export function EmissionTrendCard({ monthlyTotals, label = "Scope 1" }: EmissionTrendCardProps) {
   const total = monthlyTotals.reduce((s, v) => s + (Number.isNaN(v) ? 0 : v), 0);
   const maxVal = Math.max(...monthlyTotals, 1);
 
@@ -47,7 +48,7 @@ export function EmissionTrendCard({ monthlyTotals }: EmissionTrendCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle className="text-sm font-semibold text-foreground">
-              {formatNumber(total, 2)} tCO₂e — Scope 1 월별 추이
+              {formatNumber(total, 2)} tCO₂e — {label} 월별 추이
             </CardTitle>
             <p className="text-xs text-muted-foreground">월별 배출량 추이를 한눈에 확인합니다.</p>
           </div>
@@ -128,7 +129,7 @@ export function EmissionTrendCard({ monthlyTotals }: EmissionTrendCardProps) {
         <div className="mt-1 flex items-center justify-between px-1 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 bg-white" />
-            <span className="font-medium text-emerald-700">Scope 1</span>
+            <span className="font-medium text-emerald-700">{label}</span>
           </div>
           <span>
             연간 합계:{" "}
