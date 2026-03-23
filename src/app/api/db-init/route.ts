@@ -639,6 +639,310 @@ export async function POST() {
       END
     `);
 
+    // ══════════════════════════════════════════════
+    // KPI 도메인
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'kpi_masters')
+      CREATE TABLE kpi_masters (
+        id               NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        code             NVARCHAR(50)   NOT NULL UNIQUE,
+        name             NVARCHAR(255)  NOT NULL,
+        category         NVARCHAR(50)   NOT NULL CHECK (category IN ('environment','social','governance','carbon')),
+        unit             NVARCHAR(50)   NOT NULL,
+        description      NVARCHAR(MAX)  NULL,
+        report_included  BIT            NOT NULL DEFAULT 1,
+        created_at       DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at       DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'kpi_targets')
+      CREATE TABLE kpi_targets (
+        id           NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        kpi_id       NVARCHAR(36)   NOT NULL REFERENCES kpi_masters(id) ON DELETE CASCADE,
+        period       NVARCHAR(50)   NOT NULL,
+        target_value DECIMAL(18,6)  NOT NULL,
+        updated_by   NVARCHAR(255)  NULL,
+        created_at   DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at   DATETIME2      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT uq_kpi_target UNIQUE (kpi_id, period)
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'kpi_performance')
+      CREATE TABLE kpi_performance (
+        id           NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        kpi_id       NVARCHAR(36)   NOT NULL REFERENCES kpi_masters(id) ON DELETE CASCADE,
+        period       NVARCHAR(50)   NOT NULL,
+        actual_value DECIMAL(18,6)  NOT NULL,
+        updated_by   NVARCHAR(255)  NULL,
+        created_at   DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at   DATETIME2      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT uq_kpi_perf UNIQUE (kpi_id, period)
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'kpi_change_log')
+      CREATE TABLE kpi_change_log (
+        id         NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        kpi_id     NVARCHAR(36)   NOT NULL REFERENCES kpi_masters(id) ON DELETE CASCADE,
+        field      NVARCHAR(100)  NOT NULL,
+        old_value  NVARCHAR(MAX)  NULL,
+        new_value  NVARCHAR(MAX)  NULL,
+        changed_by NVARCHAR(255)  NOT NULL,
+        changed_at DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // ESG 데이터
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'esg_metrics')
+      CREATE TABLE esg_metrics (
+        id             NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        esg_domain     NVARCHAR(50)   NOT NULL CHECK (esg_domain IN ('environment','social','governance')),
+        category       NVARCHAR(100)  NOT NULL,
+        indicator_name NVARCHAR(255)  NOT NULL,
+        value          DECIMAL(18,6)  NULL,
+        unit           NVARCHAR(50)   NOT NULL,
+        period         NVARCHAR(50)   NOT NULL,
+        source         NVARCHAR(255)  NULL,
+        status         NVARCHAR(50)   NOT NULL DEFAULT 'pending'
+                         CHECK (status IN ('verified','estimated','pending','missing','ai_anomaly')),
+        created_at     DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at     DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // 공급망 / 협력사
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'vendors')
+      CREATE TABLE vendors (
+        id          NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        name        NVARCHAR(255)  NOT NULL,
+        email       NVARCHAR(255)  NULL,
+        status      NVARCHAR(50)   NOT NULL DEFAULT 'invited'
+                      CHECK (status IN ('active','invited','pending','suspended')),
+        tier        INT            NULL,
+        category    NVARCHAR(255)  NULL,
+        risk_level  NVARCHAR(50)   NULL CHECK (risk_level IN ('low','medium','high','critical')),
+        esg_score   DECIMAL(5,2)   NULL,
+        invited_at  DATETIME2      NULL,
+        linked_at   DATETIME2      NULL,
+        created_at  DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at  DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'vendor_submissions')
+      CREATE TABLE vendor_submissions (
+        id                         NVARCHAR(36)  NOT NULL PRIMARY KEY,
+        vendor_id                  NVARCHAR(36)  NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        period                     NVARCHAR(50)  NOT NULL,
+        status                     NVARCHAR(50)  NOT NULL DEFAULT 'not_started'
+                                     CHECK (status IN ('not_started','in_progress','submitted','verified','rejected')),
+        scope3_categories_completed INT          NOT NULL DEFAULT 0,
+        scope3_categories_total     INT          NOT NULL DEFAULT 0,
+        emissions_tco2e            DECIMAL(18,6) NULL,
+        submitted_at               DATETIME2     NULL,
+        created_at                 DATETIME2     NOT NULL DEFAULT GETDATE(),
+        updated_at                 DATETIME2     NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT uq_vendor_sub UNIQUE (vendor_id, period)
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'vendor_esg_scores')
+      CREATE TABLE vendor_esg_scores (
+        id                NVARCHAR(36)  NOT NULL PRIMARY KEY,
+        vendor_id         NVARCHAR(36)  NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+        overall_score     DECIMAL(5,2)  NULL,
+        environment_score DECIMAL(5,2)  NULL,
+        social_score      DECIMAL(5,2)  NULL,
+        governance_score  DECIMAL(5,2)  NULL,
+        risk_level        NVARCHAR(50)  NULL CHECK (risk_level IN ('low','medium','high','critical')),
+        trend             NVARCHAR(50)  NULL CHECK (trend IN ('up','down','stable')),
+        created_at        DATETIME2     NOT NULL DEFAULT GETDATE(),
+        updated_at        DATETIME2     NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // 보고서 / 컴플라이언스
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'esg_reports')
+      CREATE TABLE esg_reports (
+        id           NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        title        NVARCHAR(255)  NOT NULL,
+        type         NVARCHAR(50)   NOT NULL CHECK (type IN ('annual','quarterly','cdp','tcfd')),
+        period       NVARCHAR(50)   NOT NULL,
+        status       NVARCHAR(50)   NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')),
+        framework    NVARCHAR(50)   NULL CHECK (framework IN ('ESG','K-ESG','GRI','ISSB','CSRD')),
+        version      NVARCHAR(50)   NULL,
+        published_at DATETIME2      NULL,
+        created_at   DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at   DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'compliance_items')
+      CREATE TABLE compliance_items (
+        id           NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        framework    NVARCHAR(100)  NOT NULL,
+        requirement  NVARCHAR(255)  NOT NULL,
+        status       NVARCHAR(50)   NOT NULL DEFAULT 'non_compliant'
+                       CHECK (status IN ('compliant','partial','non_compliant','not_applicable')),
+        due_date     DATE           NULL,
+        last_checked DATETIME2      NULL,
+        created_at   DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at   DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'kpi_disclosure_mappings')
+      CREATE TABLE kpi_disclosure_mappings (
+        id              NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        kpi_code        NVARCHAR(50)   NOT NULL,
+        kpi_name        NVARCHAR(255)  NOT NULL,
+        kpi_category    NVARCHAR(50)   NOT NULL,
+        framework       NVARCHAR(50)   NOT NULL CHECK (framework IN ('ESG','K-ESG','GRI','ISSB','CSRD')),
+        disclosure_code NVARCHAR(100)  NOT NULL,
+        status          NVARCHAR(50)   NOT NULL DEFAULT 'unlinked'
+                          CHECK (status IN ('linked','partial','unlinked')),
+        created_at      DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at      DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // 중대성 평가
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'materiality_issues')
+      CREATE TABLE materiality_issues (
+        id                    NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        code                  NVARCHAR(50)   NOT NULL,
+        name                  NVARCHAR(255)  NOT NULL,
+        dimension             NVARCHAR(50)   NOT NULL CHECK (dimension IN ('environment','social','governance')),
+        description           NVARCHAR(MAX)  NULL,
+        expert_score          DECIMAL(3,2)   NOT NULL DEFAULT 3.0,
+        benchmark_score       DECIMAL(3,2)   NOT NULL DEFAULT 3.0,
+        kpi_linked_count      INT            NOT NULL DEFAULT 0,
+        kpi_connection_status NVARCHAR(50)   NULL CHECK (kpi_connection_status IN ('none','partial','full')),
+        impact_score          DECIMAL(4,2)   NULL,
+        stakeholder_score     DECIMAL(4,2)   NULL,
+        created_at            DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at            DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // 탄소 감축 / 액션
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'reduction_projects')
+      CREATE TABLE reduction_projects (
+        id                    NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        name                  NVARCHAR(255)  NOT NULL,
+        category              NVARCHAR(50)   NOT NULL CHECK (category IN ('energy','process','fleet','supply_chain')),
+        scope                 NVARCHAR(50)   NOT NULL CHECK (scope IN ('scope1','scope2','scope3')),
+        owner                 NVARCHAR(255)  NULL,
+        status                NVARCHAR(50)   NOT NULL DEFAULT 'planning'
+                                CHECK (status IN ('planning','in_progress','blocked','completed')),
+        expected_reduction_mt DECIMAL(18,6)  NULL,
+        actual_reduction_mt   DECIMAL(18,6)  NULL,
+        estimated_cost_m      DECIMAL(18,6)  NULL,
+        start_date            DATE           NULL,
+        end_date              DATE           NULL,
+        created_at            DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at            DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // 사용자 / 역할
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'roles')
+      CREATE TABLE roles (
+        id          NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        name        NVARCHAR(255)  NOT NULL,
+        description NVARCHAR(MAX)  NULL,
+        system_code NVARCHAR(100)  NULL,
+        created_at  DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at  DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'users')
+      CREATE TABLE users (
+        id            NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        name          NVARCHAR(255)  NOT NULL,
+        email         NVARCHAR(255)  NOT NULL UNIQUE,
+        department    NVARCHAR(255)  NULL,
+        job_title     NVARCHAR(255)  NULL,
+        role_id       NVARCHAR(36)   NULL REFERENCES roles(id) ON DELETE SET NULL,
+        status        NVARCHAR(50)   NOT NULL DEFAULT 'active'
+                        CHECK (status IN ('active','invited','disabled')),
+        last_login_at DATETIME2      NULL,
+        created_at    DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at    DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // ══════════════════════════════════════════════
+    // 데이터 검증 / 승인
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'data_validations')
+      CREATE TABLE data_validations (
+        id              NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        scope           NVARCHAR(50)   NOT NULL,
+        category        NVARCHAR(255)  NOT NULL,
+        emission_source NVARCHAR(255)  NOT NULL,
+        site            NVARCHAR(255)  NOT NULL,
+        period          NVARCHAR(50)   NOT NULL,
+        activity_amount NVARCHAR(255)  NULL,
+        emissions       NVARCHAR(255)  NULL,
+        status          NVARCHAR(50)   NOT NULL DEFAULT 'submitted'
+                          CHECK (status IN ('submitted','under_review','verified','missing','needs_evidence','ai_anomaly')),
+        ai_verification NVARCHAR(50)   NULL CHECK (ai_verification IN ('normal','anomaly','missing_risk')),
+        data_source     NVARCHAR(100)  NULL,
+        evidence_count  INT            NOT NULL DEFAULT 0,
+        submitted_by    NVARCHAR(255)  NULL,
+        submitted_at    DATETIME2      NULL,
+        created_at      DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at      DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'data_approvals')
+      CREATE TABLE data_approvals (
+        id              NVARCHAR(36)   NOT NULL PRIMARY KEY,
+        validation_id   NVARCHAR(36)   NOT NULL REFERENCES data_validations(id) ON DELETE CASCADE,
+        status          NVARCHAR(50)   NOT NULL DEFAULT 'pending_approval'
+                          CHECK (status IN ('pending_approval','approved','rejected','confirmed','reopened')),
+        approver        NVARCHAR(255)  NULL,
+        comment         NVARCHAR(MAX)  NULL,
+        approved_at     DATETIME2      NULL,
+        created_at      DATETIME2      NOT NULL DEFAULT GETDATE(),
+        updated_at      DATETIME2      NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
     return NextResponse.json({
       ok: true,
       message: "테이블이 생성되었습니다.",
@@ -652,6 +956,23 @@ export async function POST() {
         "organizations",
         "worksites",
         "employees",
+        "kpi_masters",
+        "kpi_targets",
+        "kpi_performance",
+        "kpi_change_log",
+        "esg_metrics",
+        "vendors",
+        "vendor_submissions",
+        "vendor_esg_scores",
+        "esg_reports",
+        "compliance_items",
+        "kpi_disclosure_mappings",
+        "materiality_issues",
+        "reduction_projects",
+        "roles",
+        "users",
+        "data_validations",
+        "data_approvals",
       ],
     });
   } catch (err: any) {
