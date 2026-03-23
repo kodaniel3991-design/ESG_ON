@@ -10,22 +10,17 @@ export async function GET(req: NextRequest) {
     const year = req.nextUrl.searchParams.get("year") ?? String(new Date().getFullYear());
 
     if (type === "summary") {
-      // 전체 배출량 요약: scope별 합계
       const r = pool.request();
       r.input("year", sql.Int, parseInt(year));
       const result = await r.query(`
-        SELECT
-          ef.scope,
-          SUM(
-            ad.activity_value *
-            COALESCE(
-              (SELECT TOP 1 em.co2_factor FROM emission_factor_master em
-               WHERE em.fuel_type = ef.fuel_type AND em.energy_type = ef.energy_type),
-              0
-            )
-          ) AS total_emissions
+        SELECT ef.scope,
+               SUM(ad.activity_value * COALESCE(em.co2_factor, 0)) AS total_emissions
         FROM activity_data ad
         JOIN emission_facilities ef ON ad.facility_id = ef.id
+        OUTER APPLY (
+          SELECT TOP 1 co2_factor FROM emission_factor_master
+          WHERE fuel_code = COALESCE(ef.fuel_type, ef.energy_type)
+        ) em
         WHERE ad.year = @year
         GROUP BY ef.scope
         ORDER BY ef.scope;
@@ -45,16 +40,13 @@ export async function GET(req: NextRequest) {
       const r2 = pool.request();
       r2.input("prev_year", sql.Int, parseInt(year) - 1);
       const prevResult = await r2.query(`
-        SELECT SUM(
-          ad.activity_value *
-          COALESCE(
-            (SELECT TOP 1 em.co2_factor FROM emission_factor_master em
-             WHERE em.fuel_type = ef.fuel_type AND em.energy_type = ef.energy_type),
-            0
-          )
-        ) AS prev_total
+        SELECT SUM(ad.activity_value * COALESCE(em.co2_factor, 0)) AS prev_total
         FROM activity_data ad
         JOIN emission_facilities ef ON ad.facility_id = ef.id
+        OUTER APPLY (
+          SELECT TOP 1 co2_factor FROM emission_factor_master
+          WHERE fuel_code = COALESCE(ef.fuel_type, ef.energy_type)
+        ) em
         WHERE ad.year = @prev_year;
       `);
       const prevTotal = parseFloat(prevResult.recordset[0]?.prev_total) || 0;
@@ -70,7 +62,6 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "sources") {
-      // 배출원별 목록
       const r = pool.request();
       r.input("year", sql.Int, parseInt(year));
       const result = await r.query(`
@@ -78,16 +69,13 @@ export async function GET(req: NextRequest) {
           ef.id, ef.facility_name, ef.scope, ef.category_id,
           ef.fuel_type, ef.unit,
           SUM(ad.activity_value) AS total_activity,
-          SUM(
-            ad.activity_value *
-            COALESCE(
-              (SELECT TOP 1 em.co2_factor FROM emission_factor_master em
-               WHERE em.fuel_type = ef.fuel_type AND em.energy_type = ef.energy_type),
-              0
-            )
-          ) AS total_emissions
+          SUM(ad.activity_value * COALESCE(em.co2_factor, 0)) AS total_emissions
         FROM emission_facilities ef
         LEFT JOIN activity_data ad ON ad.facility_id = ef.id AND ad.year = @year
+        OUTER APPLY (
+          SELECT TOP 1 co2_factor FROM emission_factor_master
+          WHERE fuel_code = COALESCE(ef.fuel_type, ef.energy_type)
+        ) em
         GROUP BY ef.id, ef.facility_name, ef.scope, ef.category_id, ef.fuel_type, ef.unit
         ORDER BY ef.scope, ef.facility_name;
       `);
@@ -107,29 +95,22 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === "trends") {
-      // 월별 트렌드
       const r = pool.request();
       r.input("year", sql.Int, parseInt(year));
       const result = await r.query(`
-        SELECT
-          ad.month,
-          ef.scope,
-          SUM(
-            ad.activity_value *
-            COALESCE(
-              (SELECT TOP 1 em.co2_factor FROM emission_factor_master em
-               WHERE em.fuel_type = ef.fuel_type AND em.energy_type = ef.energy_type),
-              0
-            )
-          ) AS emissions
+        SELECT ad.month, ef.scope,
+               SUM(ad.activity_value * COALESCE(em.co2_factor, 0)) AS emissions
         FROM activity_data ad
         JOIN emission_facilities ef ON ad.facility_id = ef.id
+        OUTER APPLY (
+          SELECT TOP 1 co2_factor FROM emission_factor_master
+          WHERE fuel_code = COALESCE(ef.fuel_type, ef.energy_type)
+        ) em
         WHERE ad.year = @year
         GROUP BY ad.month, ef.scope
         ORDER BY ad.month, ef.scope;
       `);
 
-      // 월별로 그룹핑
       const monthMap: Record<number, { scope1: number; scope2: number; scope3: number }> = {};
       for (let m = 1; m <= 12; m++) {
         monthMap[m] = { scope1: 0, scope2: 0, scope3: 0 };
