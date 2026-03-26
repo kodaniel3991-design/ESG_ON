@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, LogOut } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuGroup,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   NAV_ITEMS,
@@ -34,6 +35,13 @@ function isItemActive(pathname: string, item: NavItem): boolean {
 
 export function TopHeader() {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-6">
@@ -145,16 +153,27 @@ export function TopHeader() {
         >
           <Bell className="h-4 w-4" />
         </Button>
-        <div
-          className="flex items-center gap-2 rounded-full border border-border pl-1 pr-3 py-1.5"
-          role="button"
-          aria-label="현재 사용자 프로필"
-        >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-            KM
-          </div>
-          <span className="text-sm font-medium">김민준</span>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-2 rounded-full border border-border pl-1 pr-3 py-1.5 outline-none hover:bg-muted/50 transition-colors"
+              aria-label="사용자 메뉴"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                A
+              </div>
+              <span className="text-sm font-medium">Admin</span>
+              <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              로그아웃
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

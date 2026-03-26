@@ -478,6 +478,7 @@ model User {
   id          String    @id @db.VarChar(36)
   name        String    @db.VarChar(255)
   email       String    @unique @db.VarChar(255)
+  password    String?   @db.VarChar(255)
   department  String?   @db.VarChar(255)
   jobTitle    String?   @map("job_title") @db.VarChar(255)
   roleId      String?   @map("role_id") @db.VarChar(36)

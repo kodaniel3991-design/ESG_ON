@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 import { Providers } from "@/app/providers";
 import { AppLayout } from "./app-layout";
 
@@ -13,6 +14,13 @@ function LayoutFallback() {
 }
 
 export function FullApp({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname === "/login";
+
+  if (isAuthPage) {
+    return <Providers>{children}</Providers>;
+  }
+
   return (
     <Providers>
       <Suspense fallback={<LayoutFallback />}>
