@@ -17,7 +17,8 @@ import type {
   EmployeeRosterItem,
   CommuteTransportType,
 } from "@/types";
-import { Plus, Trash2, Ruler, Save, Building2, Upload, Download, Pencil, X } from "lucide-react";
+import { Ruler, Building2, Upload, Download } from "lucide-react";
+import { CardActionBar } from "@/components/ui/card-action-bar";
 import { toast } from "sonner";
 
 const COMMUTE_TRANSPORT_OPTIONS: { value: CommuteTransportType; label: string }[] = [
@@ -139,14 +140,30 @@ export default function SettingsEmployeeRosterPage() {
   // 엑셀 업로드 시 다른 사업장 직원 임시 보관 (저장 시 함께 처리)
   const [pendingOtherWs, setPendingOtherWs] = useState<EmployeeRosterItem[]>([]);
 
-  // 행별 편집 모드
-  const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
+  // 행 선택 및 편집 상태
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [snapshots, setSnapshots] = useState<Record<string, EmployeeRosterItem>>({});
+  // 체크박스 다중 선택
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+
+  const toggleCheck = (id: string) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleCheckAll = () => {
+    setCheckedIds((prev) => prev.size === list.length ? new Set() : new Set(list.map((e) => e.id)));
+  };
 
   // 탭 전환 시 편집 상태 초기화
   useEffect(() => {
-    setEditingIds(new Set());
+    setSelectedId(null);
+    setEditingId(null);
     setSnapshots({});
+    setCheckedIds(new Set());
   }, [selectedWorksiteId]);
 
   const handleAdd = () => {
@@ -177,12 +194,13 @@ export default function SettingsEmployeeRosterPage() {
         memo: "",
       },
     ]);
-    setEditingIds((prev) => new Set([...Array.from(prev), newId]));
+    setSelectedId(newId);
+    setEditingId(newId);
   };
 
   const handleEditStart = (emp: EmployeeRosterItem) => {
     setSnapshots((prev) => ({ ...prev, [emp.id]: { ...emp } }));
-    setEditingIds((prev) => new Set([...Array.from(prev), emp.id]));
+    setEditingId(emp.id);
   };
 
   const handleEditCancel = (id: string) => {
@@ -191,8 +209,9 @@ export default function SettingsEmployeeRosterPage() {
       setList((prev) => prev.map((e) => (e.id === id ? snap : e)));
     } else {
       setList((prev) => prev.filter((e) => e.id !== id));
+      setSelectedId(null);
     }
-    setEditingIds((prev) => { const n = new Set(Array.from(prev)); n.delete(id); return n; });
+    setEditingId(null);
     setSnapshots((prev) => { const n = { ...prev }; delete n[id]; return n; });
   };
 
@@ -217,7 +236,7 @@ export default function SettingsEmployeeRosterPage() {
       return;
     }
     await saveEmployeeRoster(toSave, selectedWorksiteId ?? null);
-    setEditingIds((prev) => { const n = new Set(Array.from(prev)); n.delete(id); return n; });
+    setEditingId(null);
     setSnapshots((prev) => { const n = { ...prev }; delete n[id]; return n; });
     queryClient.invalidateQueries({ queryKey: ["employee-roster"] });
     queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -226,7 +245,8 @@ export default function SettingsEmployeeRosterPage() {
 
   const handleRemove = (id: string) => {
     setList((prev) => prev.filter((e) => e.id !== id));
-    setEditingIds((prev) => { const n = new Set(Array.from(prev)); n.delete(id); return n; });
+    setSelectedId(null);
+    setEditingId(null);
   };
 
   const handleChange = (
@@ -493,7 +513,7 @@ export default function SettingsEmployeeRosterPage() {
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">임·직원 명부</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
               <Download className="mr-1 h-4 w-4" /> 양식
             </Button>
@@ -504,13 +524,15 @@ export default function SettingsEmployeeRosterPage() {
             <Button variant="outline" size="sm" onClick={calcAllDistances} disabled={list.length === 0}>
               <Ruler className="mr-1 h-4 w-4" /> 거리 일괄 계산
             </Button>
-            <Button variant="outline" size="sm" onClick={handleAdd} disabled={worksites.length === 0}>
-              <Plus className="mr-1 h-4 w-4" /> 추가
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
-              <Save className="mr-1 h-4 w-4" />
-              {saveMutation.isPending ? "저장 중..." : "저장"}
-            </Button>
+            <CardActionBar
+              isEditing={!!editingId}
+              hasSelection={!!selectedId}
+              onEdit={() => { if (selectedId) { const emp = list.find((e) => e.id === selectedId); if (emp) handleEditStart(emp); } }}
+              onCancel={() => { if (editingId) handleEditCancel(editingId); }}
+              onDelete={() => { if (selectedId && !editingId) handleRemove(selectedId); }}
+              onSave={() => { if (editingId) handleRowSave(editingId); }}
+              adds={[{ label: "추가", onClick: handleAdd }]}
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -535,7 +557,7 @@ export default function SettingsEmployeeRosterPage() {
                     key={ws.id}
                     type="button"
                     onClick={() => setSelectedWorksiteId(ws.id)}
-                    className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`relative px-4 py-2 text-xs font-medium transition-colors ${
                       selectedWorksiteId === ws.id
                         ? "border-b-2 border-primary text-primary"
                         : "text-muted-foreground hover:text-foreground"
@@ -572,6 +594,10 @@ export default function SettingsEmployeeRosterPage() {
                   <table className="w-full min-w-[2400px] text-[12px]">
                     <thead>
                       <tr className="border-b border-border text-left text-muted-foreground">
+                        <th className="w-8 pb-2 pr-2 text-center">
+                          <input type="checkbox" className="h-3.5 w-3.5" checked={list.length > 0 && checkedIds.size === list.length} onChange={toggleCheckAll} />
+                        </th>
+                        <th className="w-10 pb-2 pr-2 font-medium text-center">No</th>
                         <th className="w-28 pb-2 pr-2 font-medium">부서</th>
                         <th className="w-28 pb-2 pr-2 font-medium">소속팀</th>
                         <th className="w-28 pb-2 pr-2 font-medium">사원번호</th>
@@ -584,6 +610,7 @@ export default function SettingsEmployeeRosterPage() {
                         <th className="w-20 pb-2 pr-2 font-medium">성별</th>
                         <th className="w-16 pb-2 pr-2 font-medium">외국인</th>
                         <th className="w-16 pb-2 pr-2 font-medium">장애여부</th>
+                        <th className="w-16 pb-2 pr-2 font-medium">관리자</th>
                         <th className="w-32 pb-2 pr-2 font-medium">출퇴근 교통수단</th>
                         <th className="w-24 pb-2 pr-2 font-medium">연료</th>
                         <th className="min-w-[180px] pb-2 pr-2 font-medium">주소</th>
@@ -593,16 +620,22 @@ export default function SettingsEmployeeRosterPage() {
                         <th className="w-24 pb-2 pr-2 font-medium">등록일자</th>
                         <th className="w-24 pb-2 pr-2 font-medium">변경일자</th>
                         <th className="w-28 pb-2 pr-2 font-medium">기준일</th>
-                        <th className="w-16 pb-2 pr-2 font-medium">관리자</th>
-                        <th className="w-20 pb-2" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
-                      {list.map((emp) => {
-                        const isEditing = editingIds.has(emp.id);
+                      {list.map((emp, idx) => {
+                        const isEditing = editingId === emp.id;
                         const transportLabel = COMMUTE_TRANSPORT_OPTIONS.find((o) => o.value === emp.commuteTransport)?.label ?? "";
                         return (
-                        <tr key={emp.id} className="align-middle">
+                        <tr
+                          key={emp.id}
+                          className={`align-middle cursor-pointer transition-colors ${selectedId === emp.id ? "bg-accent" : "hover:bg-muted/50"}`}
+                          onClick={() => { if (!editingId) setSelectedId(emp.id); }}
+                        >
+                          <td className="py-1.5 pr-2 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input type="checkbox" className="h-3.5 w-3.5" checked={checkedIds.has(emp.id)} onChange={() => toggleCheck(emp.id)} />
+                          </td>
+                          <td className="py-1.5 pr-2 text-center text-muted-foreground">{idx + 1}</td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
                               <select
@@ -741,6 +774,15 @@ export default function SettingsEmployeeRosterPage() {
                               className="h-4 w-4"
                             />
                           </td>
+                          <td className="py-1.5 pr-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={!!emp.isManager}
+                              disabled={!isEditing}
+                              onChange={(e) => setList((prev) => prev.map((item) => item.id === emp.id ? { ...item, isManager: e.target.checked } : item))}
+                              className="h-4 w-4"
+                            />
+                          </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
                               <select value={emp.commuteTransport ?? ""} onChange={(e) => handleChange(emp.id, "commuteTransport", e.target.value || undefined)} className={inputClass}>
@@ -810,30 +852,6 @@ export default function SettingsEmployeeRosterPage() {
                           <td className="py-1.5 pr-2 text-xs text-muted-foreground whitespace-nowrap">{emp.createdAt ?? "-"}</td>
                           <td className="py-1.5 pr-2 text-xs text-muted-foreground whitespace-nowrap">{emp.updatedAt ?? "-"}</td>
                           <td className="py-1.5 pr-2 text-[12px] whitespace-nowrap">{emp.referenceDate || "-"}</td>
-                          <td className="py-1.5 pr-2 text-center">
-                            <input
-                              type="checkbox"
-                              checked={!!emp.isManager}
-                              disabled={!isEditing}
-                              onChange={(e) => setList((prev) => prev.map((item) => item.id === emp.id ? { ...item, isManager: e.target.checked } : item))}
-                              className="h-4 w-4"
-                            />
-                          </td>
-                          <td className="py-1.5">
-                            {isEditing ? (
-                              <div className="flex gap-1">
-                                <Button type="button" size="sm" onClick={() => handleRowSave(emp.id)} disabled={!emp.name.trim()}>저장</Button>
-                                <Button type="button" variant="outline" size="sm" onClick={() => handleEditCancel(emp.id)}><X className="h-3.5 w-3.5" /></Button>
-                              </div>
-                            ) : (
-                              <div className="flex gap-1">
-                                <Button type="button" variant="outline" size="sm" onClick={() => handleEditStart(emp)}><Pencil className="h-3.5 w-3.5" /></Button>
-                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => handleRemove(emp.id)}>
-                                  <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                              </div>
-                            )}
-                          </td>
                         </tr>
                         );
                       })}

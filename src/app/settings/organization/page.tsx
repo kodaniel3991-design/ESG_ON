@@ -11,7 +11,8 @@ import {
   getOrganizationSettings,
   saveOrganizationSettings,
 } from "@/services/api";
-import { Plus, Save, Trash2, Star, Pencil, X, ChevronRight } from "lucide-react";
+import { Plus, Save, Star, Pencil, X, ChevronRight } from "lucide-react";
+import { CardActionBar } from "@/components/ui/card-action-bar";
 
 const inputClass =
   "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring";
@@ -56,22 +57,36 @@ export default function SettingsOrganizationPage() {
     },
   });
 
-  const [departments, setDepartments] = useState<OrgDept[]>([]);
-  const [teams, setTeams] = useState<OrgTeam[]>([]);
-  const [positions, setPositions] = useState<OrgPosition[]>([]);
-  const [duties, setDuties] = useState<OrgDuty[]>([]);
+  type OrgStructureCache = { departments: OrgDept[]; teams: OrgTeam[]; positions: OrgPosition[]; duties: OrgDuty[] };
+  const normalizeTeams = (raw: any[]): OrgTeam[] =>
+    raw.map((t) => ({
+      ...t,
+      departmentId: t.departmentId ?? t.department_id ?? null,
+      leaderName: t.leaderName ?? t.leader_name ?? null,
+      defaultDutyName: t.defaultDutyName ?? t.default_duty_name ?? null,
+    }));
+
+  const [departments, setDepartments] = useState<OrgDept[]>(() => {
+    const c = queryClient.getQueryData<OrgStructureCache>(["org-structure"]);
+    return c?.departments ?? [];
+  });
+  const [teams, setTeams] = useState<OrgTeam[]>(() => {
+    const c = queryClient.getQueryData<OrgStructureCache>(["org-structure"]);
+    return normalizeTeams(c?.teams ?? []);
+  });
+  const [positions, setPositions] = useState<OrgPosition[]>(() => {
+    const c = queryClient.getQueryData<OrgStructureCache>(["org-structure"]);
+    return c?.positions ?? [];
+  });
+  const [duties, setDuties] = useState<OrgDuty[]>(() => {
+    const c = queryClient.getQueryData<OrgStructureCache>(["org-structure"]);
+    return c?.duties ?? [];
+  });
 
   useEffect(() => {
     if (!orgStructureData) return;
     setDepartments(orgStructureData.departments ?? []);
-    setTeams(
-      (orgStructureData.teams ?? []).map((t: any) => ({
-        ...t,
-        departmentId: t.departmentId ?? t.department_id ?? null,
-        leaderName: t.leaderName ?? t.leader_name ?? null,
-        defaultDutyName: t.defaultDutyName ?? t.default_duty_name ?? null,
-      }))
-    );
+    setTeams(normalizeTeams(orgStructureData.teams ?? []));
     setPositions(orgStructureData.positions ?? []);
     setDuties(orgStructureData.duties ?? []);
   }, [orgStructureData]);
@@ -252,17 +267,22 @@ export default function SettingsOrganizationPage() {
   }, []);
 
   const [isEditingOrg, setIsEditingOrg] = useState(false);
-  const [form, setForm] = useState<OrganizationSettings>({
-    organizationName: "",
-    organizationAddress: "",
-    organizationAddressDetail: "",
-    worksites: [],
-    defaultWorksiteId: undefined,
+  const [form, setForm] = useState<OrganizationSettings>(() => {
+    const c = queryClient.getQueryData<OrganizationSettings>(["organization-settings"]);
+    if (c) return {
+      organizationName: c.organizationName ?? "",
+      organizationAddress: c.organizationAddress ?? "",
+      organizationAddressDetail: c.organizationAddressDetail ?? "",
+      worksites: (c.worksites ?? []).map((w) => ({ ...w })),
+      defaultWorksiteId: c.defaultWorksiteId,
+    };
+    return { organizationName: "", organizationAddress: "", organizationAddressDetail: "", worksites: [], defaultWorksiteId: undefined };
   });
   // 편집 취소용 스냅샷
   const [orgSnapshot, setOrgSnapshot] = useState({ organizationName: "", organizationAddress: "", organizationAddressDetail: "" });
-  // 사업장 행별 편집 모드 (id Set)
-  const [editingWsIds, setEditingWsIds] = useState<Set<string>>(new Set());
+  // 사업장 행별 편집 모드
+  const [editingWsId, setEditingWsId] = useState<string | null>(null);
+  const [selectedWsId, setSelectedWsId] = useState<string | null>(null);
   // 사업장 편집 취소용 스냅샷
   const [wsSnapshots, setWsSnapshots] = useState<Record<string, WorksiteItem>>({});
 
@@ -278,12 +298,14 @@ export default function SettingsOrganizationPage() {
   }, [data]);
 
   const handleAdd = () => {
+    const ws = createWorksiteDraft();
     setForm((p) => {
-      const ws = createWorksiteDraft();
       const next = { ...p, worksites: [...p.worksites, ws] };
       if (!next.defaultWorksiteId) next.defaultWorksiteId = ws.id;
       return next;
     });
+    setSelectedWsId(ws.id);
+    setEditingWsId(ws.id);
   };
 
   const handleRemove = async (id: string) => {
@@ -328,7 +350,7 @@ export default function SettingsOrganizationPage() {
 
   const handleWsEdit = (w: WorksiteItem) => {
     setWsSnapshots((p) => ({ ...p, [w.id]: { ...w } }));
-    setEditingWsIds((p) => new Set(Array.from(p).concat(w.id)));
+    setEditingWsId(w.id);
   };
 
   const handleWsCancel = (id: string) => {
@@ -339,11 +361,11 @@ export default function SettingsOrganizationPage() {
         worksites: p.worksites.map((w) => (w.id === id ? { ...snap } : w)),
       }));
     }
-    setEditingWsIds((p) => new Set(Array.from(p).filter((x) => x !== id)));
+    setEditingWsId(null);
   };
 
   const handleWsSave = async (id: string) => {
-    setEditingWsIds((p) => new Set(Array.from(p).filter((x) => x !== id)));
+    setEditingWsId(null);
     await handleSave();
   };
 
@@ -499,24 +521,25 @@ export default function SettingsOrganizationPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">사업장 목록</CardTitle>
-            <div className="flex gap-1.5">
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={saveMutation.isPending || isLoading}
-              >
-                <Save className="mr-1 h-4 w-4" />
-                {saveMutation.isPending ? "저장 중..." : "저장"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAdd}
-                disabled={isLoading}
-              >
-                <Plus className="mr-1 h-4 w-4" /> 추가
-              </Button>
-            </div>
+            <CardActionBar
+              isEditing={!!editingWsId}
+              hasSelection={!!selectedWsId}
+              onEdit={() => {
+                if (selectedWsId) {
+                  const w = form.worksites.find((x) => x.id === selectedWsId);
+                  if (w) handleWsEdit(w);
+                }
+              }}
+              onCancel={() => { if (editingWsId) handleWsCancel(editingWsId); }}
+              onDelete={() => {
+                if (selectedWsId && !editingWsId) {
+                  handleRemove(selectedWsId);
+                  setSelectedWsId(null);
+                }
+              }}
+              onSave={() => { if (editingWsId) handleWsSave(editingWsId); }}
+              adds={[{ label: "추가", onClick: handleAdd }]}
+            />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -533,16 +556,20 @@ export default function SettingsOrganizationPage() {
                       <th className="w-36 pb-2 pr-2 font-medium">사업장명</th>
                       <th className="min-w-[260px] pb-2 pr-2 font-medium">주소</th>
                       <th className="min-w-[112px] pb-2 pr-2 font-medium">상세주소</th>
-                      <th className="w-20 pb-2 pr-2 font-medium">기본</th>
-                      <th className="w-28 pb-2 text-right font-medium">작업</th>
+                      <th className="w-20 pb-2 font-medium">기본</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {form.worksites.map((w) => {
                       const isDefault = w.id === form.defaultWorksiteId;
-                      const isEditing = editingWsIds.has(w.id);
+                      const isEditing = editingWsId === w.id;
+                      const isSelected = selectedWsId === w.id;
                       return (
-                        <tr key={w.id} className="align-middle">
+                        <tr
+                          key={w.id}
+                          className={`align-middle cursor-pointer transition-colors ${isSelected ? "bg-accent" : "hover:bg-muted/50"}`}
+                          onClick={() => { if (!isEditing) { setSelectedWsId(w.id); } }}
+                        >
                           {isEditing ? (
                             <>
                               <td className="py-1 pr-2">
@@ -570,82 +597,36 @@ export default function SettingsOrganizationPage() {
                                   className={inputClass}
                                 />
                               </td>
-                              <td className="py-1 pr-2">
+                              <td className="py-1">
                                 <Button
                                   type="button"
                                   variant={isDefault ? "default" : "outline"}
                                   size="sm"
-                                  onClick={() => setDefault(w.id)}
+                                  onClick={(e) => { e.stopPropagation(); setDefault(w.id); }}
                                 >
                                   <Star className="mr-1 h-3.5 w-3.5" />
                                   {isDefault ? "기본" : "설정"}
                                 </Button>
                               </td>
-                              <td className="py-1 text-right">
-                                <div className="flex justify-end gap-1">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => handleWsSave(w.id)}
-                                    disabled={saveMutation.isPending}
-                                  >
-                                    <Save className="mr-1 h-3.5 w-3.5" />
-                                    저장
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleWsCancel(w.id)}
-                                  >
-                                    <X className="mr-1 h-3.5 w-3.5" />
-                                    취소
-                                  </Button>
-                                </div>
-                              </td>
                             </>
                           ) : (
                             <>
-                              <td className="py-1 pr-2 font-medium">{w.name || <span className="text-muted-foreground">미입력</span>}</td>
-                              <td className="py-1 pr-2 text-muted-foreground">{w.address || "—"}</td>
-                              <td className="py-1 pr-2 text-muted-foreground">{w.addressDetail || "—"}</td>
-                              <td className="py-1 pr-2">
-                                {isDefault ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                    <Star className="h-3 w-3 fill-current" /> 기본
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                                    onClick={() => setDefault(w.id)}
-                                  >
-                                    기본으로
-                                  </button>
-                                )}
-                              </td>
-                              <td className="py-1 text-right">
-                                <div className="flex justify-end gap-1">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleWsEdit(w)}
-                                  >
-                                    <Pencil className="mr-1 h-3.5 w-3.5" />
-                                    수정
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-destructive hover:bg-destructive/10"
-                                    onClick={() => handleRemove(w.id)}
-                                  >
-                                    <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                    삭제
-                                  </Button>
-                                </div>
+                              <td className="py-2 pr-2 font-medium">{w.name || <span className="text-muted-foreground">미입력</span>}</td>
+                              <td className="py-2 pr-2 text-muted-foreground">{w.address || "—"}</td>
+                              <td className="py-2 pr-2 text-muted-foreground">{w.addressDetail || "—"}</td>
+                              <td className="py-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setDefault(w.id); }}
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                                    isDefault
+                                      ? "bg-primary/10 text-primary cursor-default"
+                                      : "bg-muted text-muted-foreground hover:bg-muted/70"
+                                  }`}
+                                >
+                                  <Star className={`h-3 w-3 ${isDefault ? "fill-current" : ""}`} />
+                                  기본
+                                </button>
                               </td>
                             </>
                           )}
@@ -666,65 +647,37 @@ export default function SettingsOrganizationPage() {
         {/* 부서/팀 트리 카드 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-semibold">
-              부서/팀{" "}
-              <span className="font-normal text-muted-foreground">({departments.length}부서 · {teams.length}팀)</span>
-            </CardTitle>
-            <div className="flex gap-1">
-              {/* 수정/취소 */}
-              {(editingDeptId || editingTeamId) ? (
-                <Button size="sm" variant="outline" onClick={() => {
-                  if (editingDeptId) cancelDept(editingDeptId);
-                  if (editingTeamId) cancelTeam(editingTeamId);
-                }}>
-                  <X className="h-3.5 w-3.5 mr-1" /> 취소
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline"
-                  disabled={!selectedDeptId && !selectedTeamId}
-                  onClick={() => {
-                    if (selectedDeptId) { const d = departments.find(x => x.id === selectedDeptId); if (d) startEditDept(d); }
-                    else if (selectedTeamId) { const t = teams.find(x => x.id === selectedTeamId); if (t) startEditTeam(t); }
-                  }}>
-                  <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
-                </Button>
-              )}
-              {/* 삭제 */}
-              <Button size="sm" variant="outline"
-                disabled={(!selectedDeptId && !selectedTeamId) || !!(editingDeptId || editingTeamId)}
-                className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
-                onClick={() => {
-                  if (selectedDeptId) { deleteDept(selectedDeptId); setSelectedDeptId(null); }
-                  else if (selectedTeamId) { deleteTeam(selectedTeamId); setSelectedTeamId(null); }
-                }}>
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
-              </Button>
-              {/* 저장 */}
-              <Button size="sm"
-                disabled={!editingDeptId && !editingTeamId}
-                onClick={() => {
-                  if (editingDeptId) { const d = departments.find(x => x.id === editingDeptId); if (d) saveDept(d); }
-                  else if (editingTeamId) { const t = teams.find(x => x.id === editingTeamId); if (t) saveTeam(t); }
-                }}>
-                <Save className="h-3.5 w-3.5 mr-1" /> 저장
-              </Button>
-              {/* + 부서 */}
-              <Button size="sm" variant="outline"
-                disabled={!!(editingDeptId || editingTeamId)}
-                onClick={addDept}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> 부서
-              </Button>
-              {/* + 팀 */}
-              <Button size="sm" variant="outline"
-                disabled={!!(editingDeptId || editingTeamId)}
-                onClick={() => {
-                  const deptId = selectedDeptId
-                    ?? (selectedTeamId ? (teams.find(t => t.id === selectedTeamId)?.departmentId ?? null) : null);
-                  addTeam(deptId);
-                }}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> 팀
-              </Button>
-            </div>
+            <CardTitle className="text-sm font-semibold">부서/팀</CardTitle>
+            <CardActionBar
+              isEditing={!!(editingDeptId || editingTeamId)}
+              hasSelection={!!(selectedDeptId || selectedTeamId)}
+              onEdit={() => {
+                if (selectedDeptId) { const d = departments.find(x => x.id === selectedDeptId); if (d) startEditDept(d); }
+                else if (selectedTeamId) { const t = teams.find(x => x.id === selectedTeamId); if (t) startEditTeam(t); }
+              }}
+              onCancel={() => {
+                if (editingDeptId) cancelDept(editingDeptId);
+                if (editingTeamId) cancelTeam(editingTeamId);
+              }}
+              onDelete={() => {
+                if (selectedDeptId) { deleteDept(selectedDeptId); setSelectedDeptId(null); }
+                else if (selectedTeamId) { deleteTeam(selectedTeamId); setSelectedTeamId(null); }
+              }}
+              onSave={() => {
+                if (editingDeptId) { const d = departments.find(x => x.id === editingDeptId); if (d) saveDept(d); }
+                else if (editingTeamId) { const t = teams.find(x => x.id === editingTeamId); if (t) saveTeam(t); }
+              }}
+              adds={[
+                { label: "부서", onClick: addDept },
+                {
+                  label: "팀", onClick: () => {
+                    const deptId = selectedDeptId
+                      ?? (selectedTeamId ? (teams.find(t => t.id === selectedTeamId)?.departmentId ?? null) : null);
+                    addTeam(deptId);
+                  }
+                },
+              ]}
+            />
           </CardHeader>
           <CardContent className="space-y-0.5 max-h-[520px] overflow-y-auto">
             {departments.map((dept) => {
@@ -865,33 +818,15 @@ export default function SettingsOrganizationPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold">직급 <span className="font-normal text-muted-foreground">({positions.length})</span></CardTitle>
-            <div className="flex gap-1">
-              {editingPosId ? (
-                <Button size="sm" variant="outline" onClick={() => cancelPos(editingPosId)}>
-                  <X className="h-3.5 w-3.5 mr-1" /> 취소
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline"
-                  disabled={!selectedPosId}
-                  onClick={() => { const p = positions.find(x => x.id === selectedPosId); if (p) startEditPos(p); }}>
-                  <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
-                </Button>
-              )}
-              <Button size="sm" variant="outline"
-                disabled={!selectedPosId || !!editingPosId}
-                className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
-                onClick={() => { if (selectedPosId) { deletePos(selectedPosId); setSelectedPosId(null); } }}>
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
-              </Button>
-              <Button size="sm"
-                disabled={!editingPosId}
-                onClick={() => { const p = positions.find(x => x.id === editingPosId); if (p) savePos(p); }}>
-                <Save className="h-3.5 w-3.5 mr-1" /> 저장
-              </Button>
-              <Button size="sm" variant="outline" disabled={!!editingPosId} onClick={addPos}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> 추가
-              </Button>
-            </div>
+            <CardActionBar
+              isEditing={!!editingPosId}
+              hasSelection={!!selectedPosId}
+              onEdit={() => { const p = positions.find(x => x.id === selectedPosId); if (p) startEditPos(p); }}
+              onCancel={() => cancelPos(editingPosId!)}
+              onDelete={() => { if (selectedPosId) { deletePos(selectedPosId); setSelectedPosId(null); } }}
+              onSave={() => { const p = positions.find(x => x.id === editingPosId); if (p) savePos(p); }}
+              adds={[{ label: "추가", onClick: addPos }]}
+            />
           </CardHeader>
           <CardContent className="space-y-0.5">
             {positions.map((pos) => (
@@ -924,33 +859,15 @@ export default function SettingsOrganizationPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-sm font-semibold">직무 <span className="font-normal text-muted-foreground">({duties.length})</span></CardTitle>
-            <div className="flex gap-1">
-              {editingDutyId ? (
-                <Button size="sm" variant="outline" onClick={() => cancelDuty(editingDutyId)}>
-                  <X className="h-3.5 w-3.5 mr-1" /> 취소
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline"
-                  disabled={!selectedDutyId}
-                  onClick={() => { const d = duties.find(x => x.id === selectedDutyId); if (d) startEditDuty(d); }}>
-                  <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
-                </Button>
-              )}
-              <Button size="sm" variant="outline"
-                disabled={!selectedDutyId || !!editingDutyId}
-                className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
-                onClick={() => { if (selectedDutyId) { deleteDuty(selectedDutyId); setSelectedDutyId(null); } }}>
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
-              </Button>
-              <Button size="sm"
-                disabled={!editingDutyId}
-                onClick={() => { const d = duties.find(x => x.id === editingDutyId); if (d) saveDuty(d); }}>
-                <Save className="h-3.5 w-3.5 mr-1" /> 저장
-              </Button>
-              <Button size="sm" variant="outline" disabled={!!editingDutyId} onClick={addDuty}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> 추가
-              </Button>
-            </div>
+            <CardActionBar
+              isEditing={!!editingDutyId}
+              hasSelection={!!selectedDutyId}
+              onEdit={() => { const d = duties.find(x => x.id === selectedDutyId); if (d) startEditDuty(d); }}
+              onCancel={() => cancelDuty(editingDutyId!)}
+              onDelete={() => { if (selectedDutyId) { deleteDuty(selectedDutyId); setSelectedDutyId(null); } }}
+              onSave={() => { const d = duties.find(x => x.id === editingDutyId); if (d) saveDuty(d); }}
+              adds={[{ label: "추가", onClick: addDuty }]}
+            />
           </CardHeader>
           <CardContent className="space-y-0.5">
             {duties.map((duty) => (
