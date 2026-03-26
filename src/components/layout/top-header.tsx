@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Bell, ChevronDown } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,13 +38,8 @@ export function TopHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-6">
       <div className="flex items-center gap-8">
-        <Link href="/dashboard" aria-label="CarbonOS 홈" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">C</span>
-          </div>
-          <span className="text-lg font-semibold tracking-tight text-foreground">
-            CarbonOS
-          </span>
+        <Link href="/dashboard" aria-label="ENVIO 홈" className="flex items-center gap-2">
+          <Logo />
         </Link>
         <nav
           className="hidden items-center gap-6 md:flex"

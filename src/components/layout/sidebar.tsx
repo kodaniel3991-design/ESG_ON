@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, isActivePath, type NavItem } from "@/lib/navigation";
+import { Logo } from "@/components/ui/logo";
 import {
   LayoutDashboard,
   Database,
@@ -44,9 +45,7 @@ export function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r border-border bg-card">
       <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-        <span className="text-lg font-semibold tracking-tight text-foreground">
-          CarbonOS
-        </span>
+        <Logo />
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {NAV_ITEMS.map((item) => {

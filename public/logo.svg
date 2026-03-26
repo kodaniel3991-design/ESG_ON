@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 130" fill="none">
+
+  <!-- ESG: dark gray, heavy weight -->
+  <text
+    x="2"
+    y="108"
+    font-family="Arial Black, Arial, sans-serif"
+    font-size="108"
+    font-weight="900"
+    letter-spacing="-5"
+    fill="#4a4a4a"
+  >ESG</text>
+
+  <!-- Power button circle: green ring, center (345, 68), radius 52 -->
+  <!-- Gap at top ±28° from 12 o'clock -->
+  <!-- right gap: -62° from x-axis → 345+52*cos(-62°)=369.4, 68+52*sin(-62°)=22.1 -->
+  <!-- left gap:  -118° → 345-52*cos(62°)=320.6, 22.1 -->
+  <path
+    d="M 369 23 A 52 52 0 1 1 321 23"
+    stroke="#7cc520"
+    stroke-width="13"
+    stroke-linecap="round"
+    fill="none"
+  />
+
+  <!-- Power stem: green, rounded -->
+  <line x1="345" y1="8" x2="345" y2="40" stroke="#7cc520" stroke-width="13" stroke-linecap="round"/>
+
+  <!-- ON text inside circle -->
+  <text
+    x="347"
+    y="88"
+    font-family="Arial, sans-serif"
+    font-size="30"
+    font-weight="600"
+    text-anchor="middle"
+    fill="#4a4a4a"
+  >ON</text>
+</svg>

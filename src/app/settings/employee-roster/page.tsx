@@ -9,15 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   calculateDistanceKm,
-  getDistanceApiSettings,
   getEmployeeRoster,
-  saveDistanceApiSettings,
   saveEmployeeRoster,
 } from "@/services/api";
 import { getOrganizationSettings } from "@/services/api/organization";
 import type {
-  DistanceApiProvider,
-  DistanceApiSettings,
   EmployeeRosterItem,
   CommuteTransportType,
 } from "@/types";
@@ -31,8 +27,15 @@ const COMMUTE_TRANSPORT_OPTIONS: { value: CommuteTransportType; label: string }[
   { value: "walk_bike", label: "도보·자전거" },
 ];
 
+const EMPLOYMENT_STATUS_OPTIONS = ["재직", "휴직", "퇴사"];
+const EMPLOYMENT_TYPE_OPTIONS = ["정규직", "계약직", "파견", "인턴", "기타"];
+const GENDER_OPTIONS = ["남", "여", "기타", "미응답"];
+const VEHICLE_FUEL_OPTIONS = ["휘발유", "경유", "LPG", "전기", "수소", "기타"];
+const POSITION_OPTIONS = ["사원", "주임", "대리", "과장", "차장", "부장", "팀장", "이사", "상무", "전무", "부사장", "사장", "임원", "기타"];
+const JOB_POSITION_OPTIONS = ["팀장", "파트장", "실장", "본부장", "센터장", "사업부장", "그룹장", "실무자", "기타"];
+
 const inputClass =
-  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring";
+  "h-7 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring";
 
 function trimOptional(s: string | undefined): string | undefined {
   const t = s?.trim();
@@ -66,6 +69,24 @@ export default function SettingsEmployeeRosterPage() {
     queryFn: getOrganizationSettings,
   });
   const worksites = orgData?.worksites ?? [];
+
+  // 조직 구조 (부서/팀) 조회
+  const { data: orgStructure } = useQuery({
+    queryKey: ["org-structure"],
+    queryFn: async () => {
+      const res = await fetch("/api/org-structure");
+      if (!res.ok) throw new Error("org-structure fetch failed");
+      return res.json() as Promise<{
+        departments: { id: string; name: string }[];
+        teams: { id: string; departmentId: string | null; name: string; defaultDutyName: string | null }[];
+        positions: { id: string; name: string }[];
+        duties: { id: string; name: string }[];
+      }>;
+    },
+  });
+  const orgDepts = orgStructure?.departments ?? [];
+  const orgTeams = orgStructure?.teams ?? [];
+  const orgDuties = orgStructure?.duties ?? [];
 
   // 선택된 사업장 (undefined = 아직 미초기화, null = 미배정)
   const [selectedWorksiteId, setSelectedWorksiteId] = useState<string | null | undefined>(undefined);
@@ -102,23 +123,12 @@ export default function SettingsEmployeeRosterPage() {
     queryFn: () => getEmployeeRoster(selectedWorksiteId),
   });
 
-  const { data: distanceSettings } = useQuery({
-    queryKey: ["commute-distance-api-settings"],
-    queryFn: getDistanceApiSettings,
-  });
-
   const saveMutation = useMutation<EmployeeRosterItem[], Error, EmployeeRosterItem[]>({
     mutationFn: (items) => saveEmployeeRoster(items, selectedWorksiteId ?? null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee-roster"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
     },
-  });
-
-  const saveDistanceSettingsMutation = useMutation({
-    mutationFn: saveDistanceApiSettings,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["commute-distance-api-settings"] }),
   });
 
   const [list, setList] = useState<EmployeeRosterItem[]>([]);
@@ -139,22 +149,6 @@ export default function SettingsEmployeeRosterPage() {
     setSnapshots({});
   }, [selectedWorksiteId]);
 
-  const [distanceSettingsForm, setDistanceSettingsForm] = useState<DistanceApiSettings>({
-    provider: "none",
-    enabled: false,
-    baseUrl: "",
-    apiKey: "",
-  });
-  useEffect(() => {
-    if (!distanceSettings) return;
-    setDistanceSettingsForm({
-      provider: distanceSettings.provider ?? "none",
-      enabled: !!distanceSettings.enabled,
-      baseUrl: distanceSettings.baseUrl ?? "",
-      apiKey: distanceSettings.apiKey ?? "",
-    });
-  }, [distanceSettings]);
-
   const handleAdd = () => {
     const newId = `new-${Date.now()}`;
     setList((prev) => [
@@ -164,12 +158,23 @@ export default function SettingsEmployeeRosterPage() {
         worksiteId: selectedWorksiteId ?? undefined,
         name: "",
         department: "",
+        subTeam: "",
+        isManager: false,
         employeeId: "",
+        position: "",
+        jobPosition: "",
+        jobTitle: "",
+        referenceDate: new Date().toISOString().split("T")[0],
+        employmentStatus: "재직",
+        employmentType: "",
+        hireDate: "",
+        gender: "",
         commuteTransport: undefined,
         fuel: "",
         address: "",
         addressDetail: "",
         commuteDistanceKm: undefined,
+        memo: "",
       },
     ]);
     setEditingIds((prev) => new Set([...Array.from(prev), newId]));
@@ -290,16 +295,6 @@ export default function SettingsEmployeeRosterPage() {
     }
   };
 
-  const handleSaveDistanceSettings = async () => {
-    const payload: DistanceApiSettings = {
-      provider: distanceSettingsForm.provider,
-      enabled: !!distanceSettingsForm.enabled,
-      baseUrl: trimOptional(distanceSettingsForm.baseUrl),
-      apiKey: trimOptional(distanceSettingsForm.apiKey),
-    };
-    await saveDistanceSettingsMutation.mutateAsync(payload);
-  };
-
   const calcEmployeeDistance = async (emp: EmployeeRosterItem) => {
     if (!(emp.address ?? "").trim()) return 0;
     const destination = worksiteAddress.trim() || selectedWorksite?.name || "";
@@ -323,10 +318,29 @@ export default function SettingsEmployeeRosterPage() {
 
   // 엑셀 양식 다운로드
   const handleTemplateDownload = () => {
-    const headers = ["사업장명*", "부서", "이름*", "사원번호", "출퇴근교통수단", "연료", "주소", "통근거리(km)", "등록일자", "변경일자"];
-    const note = ["※ 사업장명·이름 필수. 출퇴근교통수단: 대중교통/자가용/전기·수소/도보·자전거  연료: 휘발유/경유/LPG 등 (자가용 선택 시 입력). 통근거리: 편도 거리(km) 입력. 등록일자·변경일자는 자동 입력됩니다."];
+    const headers = [
+      "사업장명*", "부서", "소속팀", "사원번호", "이름*", "직급", "관리자(Y/N)",
+      "재직상태", "고용형태", "입사일", "퇴사일",
+      "성별", "출생연도", "국적", "외국인여부(Y/N)", "장애여부(Y/N)",
+      "출퇴근교통수단", "연료", "주소",
+      "비고",
+    ];
+    const note = [
+      "※ 사업장명·이름 필수. " +
+      "관리자(Y/N): 비워두면 직급 기준 자동 설정(과장 이상 → Y)  " +
+      "재직상태: 재직/휴직/퇴사  " +
+      "고용형태: 정규직/계약직/파견/인턴/기타  " +
+      "성별: 남/여/기타/미응답  " +
+      "출퇴근교통수단: 대중교통/자가용/전기·수소/도보·자전거  " +
+      "연료: 휘발유/경유/LPG/전기/수소  " +
+      "입사일·퇴사일: YYYY-MM-DD"
+    ];
     const ws1 = XLSXStyle.utils.aoa_to_sheet([note, headers]);
-    ws1["!cols"] = headers.map((h) => ({ wch: h === "사업장명*" || h === "주소" ? 24 : 16 }));
+    ws1["!cols"] = headers.map((h) =>
+      ["사업장명*", "주소"].includes(h) ? { wch: 26 } :
+      ["부서", "소속팀", "이름*", "출퇴근교통수단"].includes(h) ? { wch: 16 } :
+      { wch: 13 }
+    );
 
     // 전체 셀 폰트 10pt 적용
     const applyFont = (ws: ReturnType<typeof XLSXStyle.utils.aoa_to_sheet>) => {
@@ -394,22 +408,46 @@ export default function SettingsEmployeeRosterPage() {
           const rawTransport = String(r[col("출퇴근교통수단")] ?? "").trim().toLowerCase();
           const rawWsName = String(r[col("사업장명")] ?? "").replace("*", "").trim();
           const resolvedWsId = wsMap.get(rawWsName) ?? selectedWorksiteId ?? undefined;
+          const byStr = (colName: string) => String(r[col(colName)] ?? "").trim() || undefined;
+          const byNum = (colName: string) => {
+            const v = parseFloat(String(r[col(colName)] ?? ""));
+            return isNaN(v) || v <= 0 ? undefined : v;
+          };
           newItems.push({
             id: `xl-${Date.now()}-${i}`,
             worksiteId: resolvedWsId,
-            department: String(r[col("부서")] ?? "").trim() || undefined,
+            department: byStr("부서"),
+            subTeam: byStr("소속팀"),
+
             name,
-            employeeId: String(r[col("사원번호")] ?? "").trim() || undefined,
-            commuteTransport: TRANSPORT_MAP[rawTransport] ?? undefined,
-            fuel: String(r[col("연료")] ?? "").trim() || undefined,
-            address: String(r[col("주소")] ?? "").trim() || undefined,
-            addressDetail: String(r[col("상세주소")] ?? "").trim() || undefined,
-            commuteDistanceKm: (() => {
-              const distCol = col("통근거리(km)");
-              if (distCol < 0) return undefined;
-              const v = parseFloat(String(r[distCol] ?? ""));
-              return isNaN(v) || v <= 0 ? undefined : v;
+            employeeId: byStr("사원번호"),
+            position: byStr("직급"),
+            jobPosition: byStr("직무(소속팀 자동연결)") ?? byStr("직무"),
+            referenceDate: byStr("기준일(자동생성-오늘날짜)") ?? byStr("기준일") ?? new Date().toISOString().split("T")[0],
+            employmentStatus: byStr("재직상태"),
+            employmentType: byStr("고용형태"),
+            hireDate: byStr("입사일"),
+            terminationDate: byStr("퇴사일"),
+            gender: byStr("성별"),
+            birthYear: (() => { const v = parseInt(String(r[col("출생연도")] ?? "")); return isNaN(v) ? undefined : v; })(),
+            nationality: byStr("국적"),
+            isForeigner: (() => { const v = String(r[col("외국인여부(Y/N)")] ?? "").trim().toUpperCase(); return v === "Y" ? true : v === "N" ? false : undefined; })(),
+            isDisabled: (() => { const v = String(r[col("장애여부(Y/N)")] ?? "").trim().toUpperCase(); return v === "Y" ? true : v === "N" ? false : undefined; })(),
+            isManager: (() => {
+              const MANAGER_POSITIONS = ["과장", "차장", "부장", "이사", "상무", "전무", "부사장", "대표이사"];
+              const v = String(r[col("관리자(Y/N)")] ?? r[col("관리자여부(Y/N)")] ?? "").trim().toUpperCase();
+              if (v === "Y") return true;
+              if (v === "N") return false;
+              // 비어 있으면 직급으로 자동 판단
+              const pos = String(r[col("직급")] ?? "").trim();
+              return pos ? MANAGER_POSITIONS.includes(pos) : undefined;
             })(),
+            commuteTransport: TRANSPORT_MAP[rawTransport] ?? undefined,
+            fuel: byStr("연료"),
+            address: byStr("주소"),
+            addressDetail: byStr("상세주소"),
+            commuteDistanceKm: byNum("통근거리(km)"),
+            memo: byStr("비고"),
           });
         }
 
@@ -447,88 +485,14 @@ export default function SettingsEmployeeRosterPage() {
   return (
     <>
       <PageHeader
-        title="직원명부"
+        title="임/직원 관리"
         description="Scope 3 직원 출퇴근에 사용할 직원 정보를 입력합니다. 사업장별로 직원을 등록하고 거리를 산출할 수 있습니다."
       />
 
-      {/* 거리 산출 API 설정 */}
-      <Card className="mt-6">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">거리 산출 API 설정</CardTitle>
-          <Button
-            size="sm"
-            onClick={handleSaveDistanceSettings}
-            disabled={saveDistanceSettingsMutation.isPending}
-          >
-            <Save className="mr-1 h-4 w-4" />
-            {saveDistanceSettingsMutation.isPending ? "저장 중..." : "저장"}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-2">
-            <input
-              id="distance-api-enabled"
-              type="checkbox"
-              checked={distanceSettingsForm.enabled}
-              onChange={(e) =>
-                setDistanceSettingsForm((p) => ({ ...p, enabled: e.target.checked }))
-              }
-              className="h-4 w-4"
-            />
-            <label htmlFor="distance-api-enabled" className="text-sm font-medium">
-              거리 산출 API 사용
-            </label>
-            <span className="text-xs text-muted-foreground">
-              (현재는 demo 값으로 산출되며, 추후 실제 API 호출로 교체 가능)
-            </span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Provider</label>
-              <select
-                value={distanceSettingsForm.provider}
-                onChange={(e) =>
-                  setDistanceSettingsForm((p) => ({ ...p, provider: e.target.value as DistanceApiProvider }))
-                }
-                className={inputClass}
-              >
-                <option value="none">미사용</option>
-                <option value="kakao">Kakao</option>
-                <option value="naver">Naver</option>
-                <option value="google">Google</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">API Key</label>
-              <input
-                value={distanceSettingsForm.apiKey ?? ""}
-                onChange={(e) =>
-                  setDistanceSettingsForm((p) => ({ ...p, apiKey: e.target.value }))
-                }
-                placeholder="API Key"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Base URL (Custom)</label>
-              <input
-                value={distanceSettingsForm.baseUrl ?? ""}
-                onChange={(e) =>
-                  setDistanceSettingsForm((p) => ({ ...p, baseUrl: e.target.value }))
-                }
-                placeholder="https://example.com/distance"
-                className={inputClass}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 직원 목록 */}
+      {/* 임·직원 명부 */}
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">직원 목록</CardTitle>
+          <CardTitle className="text-base">임·직원 명부</CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
               <Download className="mr-1 h-4 w-4" /> 양식
@@ -605,20 +569,32 @@ export default function SettingsEmployeeRosterPage() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1200px] text-[12px]">
+                  <table className="w-full min-w-[2400px] text-[12px]">
                     <thead>
                       <tr className="border-b border-border text-left text-muted-foreground">
-                        <th className="w-24 pb-2 pr-2 font-medium">부서</th>
+                        <th className="w-28 pb-2 pr-2 font-medium">부서</th>
+                        <th className="w-28 pb-2 pr-2 font-medium">소속팀</th>
+                        <th className="w-28 pb-2 pr-2 font-medium">사원번호</th>
                         <th className="w-24 pb-2 pr-2 font-medium">이름</th>
-                        <th className="w-24 pb-2 pr-2 font-medium">사원번호</th>
+                        <th className="w-20 pb-2 pr-2 font-medium">직급</th>
+                        <th className="w-36 pb-2 pr-2 font-medium">직무</th>
+                        <th className="w-24 pb-2 pr-2 font-medium">재직상태</th>
+                        <th className="w-24 pb-2 pr-2 font-medium">고용형태</th>
+                        <th className="w-28 pb-2 pr-2 font-medium">입사일</th>
+                        <th className="w-20 pb-2 pr-2 font-medium">성별</th>
+                        <th className="w-16 pb-2 pr-2 font-medium">외국인</th>
+                        <th className="w-16 pb-2 pr-2 font-medium">장애여부</th>
                         <th className="w-32 pb-2 pr-2 font-medium">출퇴근 교통수단</th>
-                        <th className="w-20 pb-2 pr-2 font-medium">연료</th>
+                        <th className="w-24 pb-2 pr-2 font-medium">연료</th>
                         <th className="min-w-[180px] pb-2 pr-2 font-medium">주소</th>
                         <th className="w-24 pb-2 pr-2 font-medium">거리(km)</th>
                         <th className="w-16 pb-2 pr-2 font-medium">계산</th>
+                        <th className="w-32 pb-2 pr-2 font-medium">비고</th>
                         <th className="w-24 pb-2 pr-2 font-medium">등록일자</th>
                         <th className="w-24 pb-2 pr-2 font-medium">변경일자</th>
-                        <th className="w-10 pb-2" />
+                        <th className="w-28 pb-2 pr-2 font-medium">기준일</th>
+                        <th className="w-16 pb-2 pr-2 font-medium">관리자</th>
+                        <th className="w-20 pb-2" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
@@ -629,9 +605,58 @@ export default function SettingsEmployeeRosterPage() {
                         <tr key={emp.id} className="align-middle">
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
-                              <input type="text" value={emp.department ?? ""} onChange={(e) => handleChange(emp.id, "department", e.target.value)} placeholder="부서" className={inputClass} />
+                              <select
+                                value={emp.department ?? ""}
+                                onChange={(e) => {
+                                  handleChange(emp.id, "department", e.target.value);
+                                  handleChange(emp.id, "subTeam", "");
+                                }}
+                                className={inputClass}
+                              >
+                                <option value="">선택</option>
+                                {orgDepts.map((d) => (
+                                  <option key={d.id} value={d.name}>{d.name}</option>
+                                ))}
+                              </select>
                             ) : (
                               <span className="text-[12px]">{emp.department || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <select
+                                value={emp.subTeam ?? ""}
+                                onChange={(e) => {
+                                  const teamName = e.target.value;
+                                  handleChange(emp.id, "subTeam", teamName);
+                                  // 기본 직무 자동 설정
+                                  const matched = orgTeams.find((t) => t.name === teamName);
+                                  if (matched?.defaultDutyName) {
+                                    handleChange(emp.id, "jobPosition", matched.defaultDutyName);
+                                  }
+                                }}
+                                className={inputClass}
+                              >
+                                <option value="">선택</option>
+                                {orgTeams
+                                  .filter((t) => {
+                                    if (!emp.department) return true;
+                                    const dept = orgDepts.find((d) => d.name === emp.department);
+                                    return dept ? t.departmentId === dept.id : true;
+                                  })
+                                  .map((t) => (
+                                    <option key={t.id} value={t.name}>{t.name}</option>
+                                  ))}
+                              </select>
+                            ) : (
+                              <span className="text-[12px]">{emp.subTeam || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <input type="text" value={emp.employeeId ?? ""} onChange={(e) => handleChange(emp.id, "employeeId", e.target.value)} placeholder="사원번호" className={inputClass} />
+                            ) : (
+                              <span className="text-[12px]">{emp.employeeId || "-"}</span>
                             )}
                           </td>
                           <td className="py-1.5 pr-2">
@@ -643,10 +668,78 @@ export default function SettingsEmployeeRosterPage() {
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
-                              <input type="text" value={emp.employeeId ?? ""} onChange={(e) => handleChange(emp.id, "employeeId", e.target.value)} placeholder="사원번호" className={inputClass} />
+                              <select value={emp.position ?? ""} onChange={(e) => handleChange(emp.id, "position", e.target.value || undefined)} className={inputClass}>
+                                <option value="">선택</option>
+                                {POSITION_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
                             ) : (
-                              <span className="text-[12px]">{emp.employeeId || "-"}</span>
+                              <span className="text-[12px]">{emp.position || "-"}</span>
                             )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <select value={emp.jobPosition ?? ""} onChange={(e) => handleChange(emp.id, "jobPosition", e.target.value || undefined)} className={inputClass}>
+                                <option value="">선택</option>
+                                {orgDuties.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
+                              </select>
+                            ) : (
+                              <span className="text-[12px]">{emp.jobPosition || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <select value={emp.employmentStatus ?? ""} onChange={(e) => handleChange(emp.id, "employmentStatus", e.target.value || undefined)} className={inputClass}>
+                                <option value="">선택</option>
+                                {EMPLOYMENT_STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            ) : (
+                              <span className="text-[12px]">{emp.employmentStatus || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <select value={emp.employmentType ?? ""} onChange={(e) => handleChange(emp.id, "employmentType", e.target.value || undefined)} className={inputClass}>
+                                <option value="">선택</option>
+                                {EMPLOYMENT_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            ) : (
+                              <span className="text-[12px]">{emp.employmentType || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <input type="date" value={emp.hireDate ?? ""} onChange={(e) => handleChange(emp.id, "hireDate", e.target.value)} className={inputClass} />
+                            ) : (
+                              <span className="text-[12px]">{emp.hireDate || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <select value={emp.gender ?? ""} onChange={(e) => handleChange(emp.id, "gender", e.target.value || undefined)} className={inputClass}>
+                                <option value="">선택</option>
+                                {GENDER_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            ) : (
+                              <span className="text-[12px]">{emp.gender || "-"}</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={!!emp.isForeigner}
+                              disabled={!isEditing}
+                              onChange={(e) => setList((prev) => prev.map((item) => item.id === emp.id ? { ...item, isForeigner: e.target.checked } : item))}
+                              className="h-4 w-4"
+                            />
+                          </td>
+                          <td className="py-1.5 pr-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={!!emp.isDisabled}
+                              disabled={!isEditing}
+                              onChange={(e) => setList((prev) => prev.map((item) => item.id === emp.id ? { ...item, isDisabled: e.target.checked } : item))}
+                              className="h-4 w-4"
+                            />
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
@@ -662,7 +755,10 @@ export default function SettingsEmployeeRosterPage() {
                           </td>
                           <td className="py-1.5 pr-2">
                             {isEditing ? (
-                              <input type="text" value={emp.fuel ?? ""} onChange={(e) => handleChange(emp.id, "fuel", e.target.value)} placeholder="연료" className={inputClass} />
+                              <select value={emp.fuel ?? ""} onChange={(e) => handleChange(emp.id, "fuel", e.target.value || undefined)} className={inputClass}>
+                                <option value="">선택</option>
+                                {VEHICLE_FUEL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
                             ) : (
                               <span className="text-[12px]">{emp.fuel || "-"}</span>
                             )}
@@ -704,8 +800,25 @@ export default function SettingsEmployeeRosterPage() {
                               <Ruler className="h-3.5 w-3.5" />
                             </Button>
                           </td>
+                          <td className="py-1.5 pr-2">
+                            {isEditing ? (
+                              <input type="text" value={emp.memo ?? ""} onChange={(e) => handleChange(emp.id, "memo", e.target.value)} placeholder="비고" className={inputClass} />
+                            ) : (
+                              <span className="text-[12px]">{emp.memo || "-"}</span>
+                            )}
+                          </td>
                           <td className="py-1.5 pr-2 text-xs text-muted-foreground whitespace-nowrap">{emp.createdAt ?? "-"}</td>
                           <td className="py-1.5 pr-2 text-xs text-muted-foreground whitespace-nowrap">{emp.updatedAt ?? "-"}</td>
+                          <td className="py-1.5 pr-2 text-[12px] whitespace-nowrap">{emp.referenceDate || "-"}</td>
+                          <td className="py-1.5 pr-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={!!emp.isManager}
+                              disabled={!isEditing}
+                              onChange={(e) => setList((prev) => prev.map((item) => item.id === emp.id ? { ...item, isManager: e.target.checked } : item))}
+                              className="h-4 w-4"
+                            />
+                          </td>
                           <td className="py-1.5">
                             {isEditing ? (
                               <div className="flex gap-1">

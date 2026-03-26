@@ -111,28 +111,55 @@ export interface DistanceApiSettings {
 /** 직원 출퇴근: 설정에서 등록하는 직원명부 항목 */
 export interface EmployeeRosterItem {
   id: string;
-  /** 소속 사업장 ID */
+  // 기본
   worksiteId?: string;
-  /** 부서 */
+  workplaceName?: string;
   department?: string;
-  /** 이름 */
+  subTeam?: string;
+  team?: string;
+  isManager?: boolean;
   name: string;
-  /** 사원번호 */
   employeeId?: string;
-  /** 출퇴근 교통수단 */
-  commuteTransport?: CommuteTransportType;
-  /** 연료 (자가용인 경우 등) */
-  fuel?: string;
-  /** 주소 (거주지 또는 출퇴근 기준) */
-  address?: string;
-  /** 상세주소 (거리 산출 정밀도를 위해) */
+  position?: string;
+  jobPosition?: string;
+  jobTitle?: string;
+  // 고용
+  employmentStatus?: string;
+  employmentType?: string;
+  referenceDate?: string;
+  hireDate?: string;
+  terminationDate?: string;
+  leaveStartDate?: string;
+  leaveEndDate?: string;
+  // 다양성
+  gender?: string;
+  birthYear?: number;
+  nationality?: string;
+  isForeigner?: boolean;
+  isDisabled?: boolean;
+  disabilityType?: string;
+  // 출퇴근
+  homeAddress?: string;
+  address?: string;        // kept for backwards compatibility (= homeAddress)
   addressDetail?: string;
-  /** 주소 ↔ 사업장(출근지) 거리 (km) */
+  workAddress?: string;
+  commuteMode?: string;
+  commuteTransport?: CommuteTransportType;
+  vehicleFuelType?: string;
+  fuel?: string;           // kept for backwards compatibility (= vehicleFuelType)
   commuteDistanceKm?: number;
-  /** 등록일자 */
+  roundTripDistanceKm?: number;
+  workDaysPerMonth?: number;
+  monthlyCommuteEmission?: number;
+  // 관리
+  dataSource?: string;
+  evidenceFileId?: string;
+  memo?: string;
+  // 시스템
   createdAt?: string;
-  /** 변경일자 */
   updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 // ========== 사용자 및 권한 ==========

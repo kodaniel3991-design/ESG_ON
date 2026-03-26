@@ -616,6 +616,64 @@ export async function POST() {
       );
     `);
 
+    // 직원명부 테이블 신규 컬럼 마이그레이션
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'team')
+        ALTER TABLE employees ADD team NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'position')
+        ALTER TABLE employees ADD position NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'employment_status')
+        ALTER TABLE employees ADD employment_status NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'employment_type')
+        ALTER TABLE employees ADD employment_type NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'hire_date')
+        ALTER TABLE employees ADD hire_date DATE NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'termination_date')
+        ALTER TABLE employees ADD termination_date DATE NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'leave_start_date')
+        ALTER TABLE employees ADD leave_start_date DATE NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'leave_end_date')
+        ALTER TABLE employees ADD leave_end_date DATE NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'reference_date')
+        ALTER TABLE employees ADD reference_date DATE NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'job_position')
+        ALTER TABLE employees ADD job_position NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'sub_team')
+        ALTER TABLE employees ADD sub_team NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'is_manager')
+        ALTER TABLE employees ADD is_manager BIT NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'gender')
+        ALTER TABLE employees ADD gender NVARCHAR(20) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'birth_year')
+        ALTER TABLE employees ADD birth_year INT NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'nationality')
+        ALTER TABLE employees ADD nationality NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'is_foreigner')
+        ALTER TABLE employees ADD is_foreigner BIT NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'is_disabled')
+        ALTER TABLE employees ADD is_disabled BIT NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'disability_type')
+        ALTER TABLE employees ADD disability_type NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'work_address')
+        ALTER TABLE employees ADD work_address NVARCHAR(500) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'round_trip_distance_km')
+        ALTER TABLE employees ADD round_trip_distance_km DECIMAL(10,2) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'work_days_per_month')
+        ALTER TABLE employees ADD work_days_per_month INT NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'monthly_commute_emission')
+        ALTER TABLE employees ADD monthly_commute_emission DECIMAL(12,4) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'data_source')
+        ALTER TABLE employees ADD data_source NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'evidence_file_id')
+        ALTER TABLE employees ADD evidence_file_id NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'memo')
+        ALTER TABLE employees ADD memo NVARCHAR(MAX) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'created_by')
+        ALTER TABLE employees ADD created_by NVARCHAR(100) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('employees') AND name = 'updated_by')
+        ALTER TABLE employees ADD updated_by NVARCHAR(100) NULL;
+    `);
+
     // 기존 마이그레이션 (이전 테이블)
     await pool.request().query(`
       IF EXISTS (SELECT * FROM sys.tables WHERE name = 'facilities')
@@ -943,6 +1001,60 @@ export async function POST() {
       );
     `);
 
+    // ══════════════════════════════════════════════
+    // 조직 구조 (부서 / 팀 / 직급)
+    // ══════════════════════════════════════════════
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'org_departments')
+      CREATE TABLE org_departments (
+        id         NVARCHAR(50)  NOT NULL PRIMARY KEY,
+        name       NVARCHAR(100) NOT NULL,
+        sort_order INT           NOT NULL DEFAULT 0,
+        created_at DATETIME2     NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'org_teams')
+      CREATE TABLE org_teams (
+        id            NVARCHAR(50)  NOT NULL PRIMARY KEY,
+        department_id NVARCHAR(50)  NULL REFERENCES org_departments(id) ON DELETE SET NULL,
+        name          NVARCHAR(100) NOT NULL,
+        leader_name   NVARCHAR(100) NULL,
+        sort_order    INT           NOT NULL DEFAULT 0,
+        created_at    DATETIME2     NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'org_positions')
+      CREATE TABLE org_positions (
+        id         NVARCHAR(50)  NOT NULL PRIMARY KEY,
+        name       NVARCHAR(100) NOT NULL,
+        sort_order INT           NOT NULL DEFAULT 0,
+        created_at DATETIME2     NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
+    // org_teams에 default_duty_name 컬럼 추가 (idempotent)
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT * FROM sys.columns
+        WHERE object_id = OBJECT_ID('org_teams') AND name = 'default_duty_name'
+      )
+      ALTER TABLE org_teams ADD default_duty_name NVARCHAR(100) NULL;
+    `);
+
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'org_duties')
+      CREATE TABLE org_duties (
+        id         NVARCHAR(50)  NOT NULL PRIMARY KEY,
+        name       NVARCHAR(100) NOT NULL,
+        sort_order INT           NOT NULL DEFAULT 0,
+        created_at DATETIME2     NOT NULL DEFAULT GETDATE()
+      );
+    `);
+
     return NextResponse.json({
       ok: true,
       message: "테이블이 생성되었습니다.",
@@ -973,6 +1085,10 @@ export async function POST() {
         "users",
         "data_validations",
         "data_approvals",
+        "org_departments",
+        "org_teams",
+        "org_positions",
+        "org_duties",
       ],
     });
   } catch (err: any) {

@@ -15,7 +15,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
       { href: "/settings/users", label: "사용자 관리" },
       { href: "/settings/roles", label: "권한 관리" },
       { href: "/settings/integrations", label: "데이터 연동 설정" },
-      { href: "/settings/employee-roster", label: "직원명부" },
+      { href: "/settings/employee-roster", label: "임/직원 관리" },
       { href: "/settings/api-keys", label: "API 키 관리" },
       { href: "/settings/system", label: "시스템 설정" },
     ],

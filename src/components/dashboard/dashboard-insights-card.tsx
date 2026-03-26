@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DashboardInsightItem } from "@/types";
-import { AlertCircle, Sun, FileCheck } from "lucide-react";
+import { AlertCircle, Sun, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const iconMap = {
   anomaly: AlertCircle,
   recommendation: Sun,
-  report: FileCheck,
+  report: FileText,
 };
 
 const iconColorMap = {
@@ -56,8 +56,8 @@ export function DashboardInsightsCard({
       <CardContent className="min-h-0 flex-1 overflow-auto p-3 pt-0">
         <ul className="space-y-2">
           {items.map((item) => {
-            const Icon = iconMap[item.type];
-            const colorClass = iconColorMap[item.type];
+            const Icon = iconMap[item.type as keyof typeof iconMap] ?? AlertCircle;
+            const colorClass = iconColorMap[item.type as keyof typeof iconColorMap] ?? "text-muted-foreground";
             return (
               <li
                 key={item.id}

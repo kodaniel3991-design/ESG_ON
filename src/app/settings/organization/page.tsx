@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +11,22 @@ import {
   getOrganizationSettings,
   saveOrganizationSettings,
 } from "@/services/api";
-import { Plus, Save, Trash2, Star, Pencil, X } from "lucide-react";
+import { Plus, Save, Trash2, Star, Pencil, X, ChevronRight } from "lucide-react";
 
 const inputClass =
   "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring";
+
+const selectClass =
+  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring";
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+type OrgDept = { id: string; name: string; sort_order: number };
+type OrgTeam = { id: string; departmentId: string | null; name: string; leaderName: string | null; defaultDutyName: string | null; sort_order: number };
+type OrgPosition = { id: string; name: string; sort_order: number };
+type OrgDuty = { id: string; name: string; sort_order: number };
 
 function trimOptional(s: string | undefined): string | undefined {
   const t = s?.trim();
@@ -33,6 +45,211 @@ export default function SettingsOrganizationPage() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["organization-settings"] }),
   });
+
+  // ── 조직 구조 ──────────────────────────────────
+  const { data: orgStructureData } = useQuery({
+    queryKey: ["org-structure"],
+    queryFn: async () => {
+      const res = await fetch("/api/org-structure");
+      if (!res.ok) throw new Error("org-structure fetch failed");
+      return res.json() as Promise<{ departments: OrgDept[]; teams: OrgTeam[]; positions: OrgPosition[]; duties: OrgDuty[] }>;
+    },
+  });
+
+  const [departments, setDepartments] = useState<OrgDept[]>([]);
+  const [teams, setTeams] = useState<OrgTeam[]>([]);
+  const [positions, setPositions] = useState<OrgPosition[]>([]);
+  const [duties, setDuties] = useState<OrgDuty[]>([]);
+
+  useEffect(() => {
+    if (!orgStructureData) return;
+    setDepartments(orgStructureData.departments ?? []);
+    setTeams(
+      (orgStructureData.teams ?? []).map((t: any) => ({
+        ...t,
+        departmentId: t.departmentId ?? t.department_id ?? null,
+        leaderName: t.leaderName ?? t.leader_name ?? null,
+        defaultDutyName: t.defaultDutyName ?? t.default_duty_name ?? null,
+      }))
+    );
+    setPositions(orgStructureData.positions ?? []);
+    setDuties(orgStructureData.duties ?? []);
+  }, [orgStructureData]);
+
+  const orgMutation = useMutation({
+    mutationFn: async (payload: { type: string; action: string; item: any }) => {
+      const res = await fetch("/api/org-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("org-structure mutation failed");
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["org-structure"] }),
+  });
+
+  // 부서 편집 상태
+  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
+  const [deptSnapshots, setDeptSnapshots] = useState<Record<string, OrgDept>>({});
+
+  const addDept = useCallback(() => {
+    const newItem: OrgDept = { id: genId(), name: "", sort_order: departments.length };
+    setDepartments((p) => [...p, newItem]);
+    setEditingDeptId(newItem.id);
+    setSelectedDeptId(newItem.id);
+    setSelectedTeamId(null);
+  }, [departments.length]);
+
+  const saveDept = useCallback(async (dept: OrgDept) => {
+    if (!dept.name.trim()) return;
+    await orgMutation.mutateAsync({ type: "department", action: "upsert", item: dept });
+    setEditingDeptId(null);
+  }, [orgMutation]);
+
+  const cancelDept = useCallback((id: string) => {
+    const snap = deptSnapshots[id];
+    if (snap) {
+      setDepartments((p) => p.map((d) => (d.id === id ? snap : d)));
+    } else {
+      setDepartments((p) => p.filter((d) => d.id !== id));
+    }
+    setEditingDeptId(null);
+  }, [deptSnapshots]);
+
+  const deleteDept = useCallback(async (id: string) => {
+    setDepartments((p) => p.filter((d) => d.id !== id));
+    await orgMutation.mutateAsync({ type: "department", action: "delete", item: { id } });
+  }, [orgMutation]);
+
+  const startEditDept = useCallback((dept: OrgDept) => {
+    setDeptSnapshots((p) => ({ ...p, [dept.id]: { ...dept } }));
+    setEditingDeptId(dept.id);
+  }, []);
+
+  // 팀 편집 상태
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [teamSnapshots, setTeamSnapshots] = useState<Record<string, OrgTeam>>({});
+
+  const addTeam = useCallback((deptId?: string | null) => {
+    const newItem: OrgTeam = { id: genId(), name: "", departmentId: deptId ?? null, leaderName: null, defaultDutyName: null, sort_order: teams.length };
+    setTeams((p) => [...p, newItem]);
+    setEditingTeamId(newItem.id);
+    setSelectedTeamId(newItem.id);
+    setSelectedDeptId(null);
+    if (deptId) setExpandedDeptIds((prev) => new Set(prev).add(deptId));
+  }, [teams.length]);
+
+  const saveTeam = useCallback(async (team: OrgTeam) => {
+    if (!team.name.trim()) return;
+    await orgMutation.mutateAsync({ type: "team", action: "upsert", item: team });
+    setEditingTeamId(null);
+  }, [orgMutation]);
+
+  const cancelTeam = useCallback((id: string) => {
+    const snap = teamSnapshots[id];
+    if (snap) {
+      setTeams((p) => p.map((t) => (t.id === id ? snap : t)));
+    } else {
+      setTeams((p) => p.filter((t) => t.id !== id));
+    }
+    setEditingTeamId(null);
+  }, [teamSnapshots]);
+
+  const deleteTeam = useCallback(async (id: string) => {
+    setTeams((p) => p.filter((t) => t.id !== id));
+    await orgMutation.mutateAsync({ type: "team", action: "delete", item: { id } });
+  }, [orgMutation]);
+
+  const startEditTeam = useCallback((team: OrgTeam) => {
+    setTeamSnapshots((p) => ({ ...p, [team.id]: { ...team } }));
+    setEditingTeamId(team.id);
+  }, []);
+
+  // 직급 편집 상태
+  const [editingPosId, setEditingPosId] = useState<string | null>(null);
+  const [posSnapshots, setPosSnapshots] = useState<Record<string, OrgPosition>>({});
+
+  const addPos = useCallback(() => {
+    const newItem: OrgPosition = { id: genId(), name: "", sort_order: positions.length };
+    setPositions((p) => [...p, newItem]);
+    setEditingPosId(newItem.id);
+  }, [positions.length]);
+
+  const savePos = useCallback(async (pos: OrgPosition) => {
+    if (!pos.name.trim()) return;
+    await orgMutation.mutateAsync({ type: "position", action: "upsert", item: pos });
+    setEditingPosId(null);
+  }, [orgMutation]);
+
+  const cancelPos = useCallback((id: string) => {
+    const snap = posSnapshots[id];
+    if (snap) {
+      setPositions((p) => p.map((pos) => (pos.id === id ? snap : pos)));
+    } else {
+      setPositions((p) => p.filter((pos) => pos.id !== id));
+    }
+    setEditingPosId(null);
+  }, [posSnapshots]);
+
+  const deletePos = useCallback(async (id: string) => {
+    setPositions((p) => p.filter((pos) => pos.id !== id));
+    await orgMutation.mutateAsync({ type: "position", action: "delete", item: { id } });
+  }, [orgMutation]);
+
+  const startEditPos = useCallback((pos: OrgPosition) => {
+    setPosSnapshots((p) => ({ ...p, [pos.id]: { ...pos } }));
+    setEditingPosId(pos.id);
+  }, []);
+
+  // 직무 편집 상태
+  const [editingDutyId, setEditingDutyId] = useState<string | null>(null);
+  const [dutySnapshots, setDutySnapshots] = useState<Record<string, OrgDuty>>({});
+
+  const addDuty = useCallback(() => {
+    const newItem: OrgDuty = { id: genId(), name: "", sort_order: duties.length };
+    setDuties((p) => [...p, newItem]);
+    setEditingDutyId(newItem.id);
+  }, [duties.length]);
+
+  const saveDuty = useCallback(async (duty: OrgDuty) => {
+    if (!duty.name.trim()) return;
+    await orgMutation.mutateAsync({ type: "duty", action: "upsert", item: duty });
+    setEditingDutyId(null);
+  }, [orgMutation]);
+
+  const cancelDuty = useCallback((id: string) => {
+    const snap = dutySnapshots[id];
+    if (snap) setDuties((p) => p.map((d) => d.id === id ? snap : d));
+    else setDuties((p) => p.filter((d) => d.id !== id));
+    setEditingDutyId(null);
+  }, [dutySnapshots]);
+
+  const deleteDuty = useCallback(async (id: string) => {
+    setDuties((p) => p.filter((d) => d.id !== id));
+    await orgMutation.mutateAsync({ type: "duty", action: "delete", item: { id } });
+  }, [orgMutation]);
+
+  const startEditDuty = useCallback((duty: OrgDuty) => {
+    setDutySnapshots((p) => ({ ...p, [duty.id]: { ...duty } }));
+    setEditingDutyId(duty.id);
+  }, []);
+
+  // 행 선택 상태
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [selectedPosId, setSelectedPosId] = useState<string | null>(null);
+  const [selectedDutyId, setSelectedDutyId] = useState<string | null>(null);
+
+  // 트리 확장 상태
+  const [expandedDeptIds, setExpandedDeptIds] = useState<Set<string>>(new Set());
+  const toggleDeptExpand = useCallback((id: string) => {
+    setExpandedDeptIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   const [isEditingOrg, setIsEditingOrg] = useState(false);
   const [form, setForm] = useState<OrganizationSettings>({
@@ -328,7 +545,7 @@ export default function SettingsOrganizationPage() {
                         <tr key={w.id} className="align-middle">
                           {isEditing ? (
                             <>
-                              <td className="py-2 pr-2">
+                              <td className="py-1 pr-2">
                                 <input
                                   value={w.name}
                                   onChange={(e) => handleWorksiteChange(w.id, "name", e.target.value)}
@@ -337,7 +554,7 @@ export default function SettingsOrganizationPage() {
                                   autoFocus
                                 />
                               </td>
-                              <td className="py-2 pr-2">
+                              <td className="py-1 pr-2">
                                 <input
                                   value={w.address}
                                   onChange={(e) => handleWorksiteChange(w.id, "address", e.target.value)}
@@ -345,7 +562,7 @@ export default function SettingsOrganizationPage() {
                                   className={inputClass}
                                 />
                               </td>
-                              <td className="py-2 pr-2">
+                              <td className="py-1 pr-2">
                                 <input
                                   value={w.addressDetail ?? ""}
                                   onChange={(e) => handleWorksiteChange(w.id, "addressDetail", e.target.value)}
@@ -353,7 +570,7 @@ export default function SettingsOrganizationPage() {
                                   className={inputClass}
                                 />
                               </td>
-                              <td className="py-2 pr-2">
+                              <td className="py-1 pr-2">
                                 <Button
                                   type="button"
                                   variant={isDefault ? "default" : "outline"}
@@ -364,7 +581,7 @@ export default function SettingsOrganizationPage() {
                                   {isDefault ? "기본" : "설정"}
                                 </Button>
                               </td>
-                              <td className="py-2 text-right">
+                              <td className="py-1 text-right">
                                 <div className="flex justify-end gap-1">
                                   <Button
                                     type="button"
@@ -389,10 +606,10 @@ export default function SettingsOrganizationPage() {
                             </>
                           ) : (
                             <>
-                              <td className="py-2 pr-2 font-medium">{w.name || <span className="text-muted-foreground">미입력</span>}</td>
-                              <td className="py-2 pr-2 text-muted-foreground">{w.address || "—"}</td>
-                              <td className="py-2 pr-2 text-muted-foreground">{w.addressDetail || "—"}</td>
-                              <td className="py-2 pr-2">
+                              <td className="py-1 pr-2 font-medium">{w.name || <span className="text-muted-foreground">미입력</span>}</td>
+                              <td className="py-1 pr-2 text-muted-foreground">{w.address || "—"}</td>
+                              <td className="py-1 pr-2 text-muted-foreground">{w.addressDetail || "—"}</td>
+                              <td className="py-1 pr-2">
                                 {isDefault ? (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                                     <Star className="h-3 w-3 fill-current" /> 기본
@@ -407,7 +624,7 @@ export default function SettingsOrganizationPage() {
                                   </button>
                                 )}
                               </td>
-                              <td className="py-2 text-right">
+                              <td className="py-1 text-right">
                                 <div className="flex justify-end gap-1">
                                   <Button
                                     type="button"
@@ -441,6 +658,327 @@ export default function SettingsOrganizationPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* 조직 구조 관리 */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+
+        {/* 부서/팀 트리 카드 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold">
+              부서/팀{" "}
+              <span className="font-normal text-muted-foreground">({departments.length}부서 · {teams.length}팀)</span>
+            </CardTitle>
+            <div className="flex gap-1">
+              {/* 수정/취소 */}
+              {(editingDeptId || editingTeamId) ? (
+                <Button size="sm" variant="outline" onClick={() => {
+                  if (editingDeptId) cancelDept(editingDeptId);
+                  if (editingTeamId) cancelTeam(editingTeamId);
+                }}>
+                  <X className="h-3.5 w-3.5 mr-1" /> 취소
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline"
+                  disabled={!selectedDeptId && !selectedTeamId}
+                  onClick={() => {
+                    if (selectedDeptId) { const d = departments.find(x => x.id === selectedDeptId); if (d) startEditDept(d); }
+                    else if (selectedTeamId) { const t = teams.find(x => x.id === selectedTeamId); if (t) startEditTeam(t); }
+                  }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
+                </Button>
+              )}
+              {/* 삭제 */}
+              <Button size="sm" variant="outline"
+                disabled={(!selectedDeptId && !selectedTeamId) || !!(editingDeptId || editingTeamId)}
+                className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
+                onClick={() => {
+                  if (selectedDeptId) { deleteDept(selectedDeptId); setSelectedDeptId(null); }
+                  else if (selectedTeamId) { deleteTeam(selectedTeamId); setSelectedTeamId(null); }
+                }}>
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
+              </Button>
+              {/* 저장 */}
+              <Button size="sm"
+                disabled={!editingDeptId && !editingTeamId}
+                onClick={() => {
+                  if (editingDeptId) { const d = departments.find(x => x.id === editingDeptId); if (d) saveDept(d); }
+                  else if (editingTeamId) { const t = teams.find(x => x.id === editingTeamId); if (t) saveTeam(t); }
+                }}>
+                <Save className="h-3.5 w-3.5 mr-1" /> 저장
+              </Button>
+              {/* + 부서 */}
+              <Button size="sm" variant="outline"
+                disabled={!!(editingDeptId || editingTeamId)}
+                onClick={addDept}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> 부서
+              </Button>
+              {/* + 팀 */}
+              <Button size="sm" variant="outline"
+                disabled={!!(editingDeptId || editingTeamId)}
+                onClick={() => {
+                  const deptId = selectedDeptId
+                    ?? (selectedTeamId ? (teams.find(t => t.id === selectedTeamId)?.departmentId ?? null) : null);
+                  addTeam(deptId);
+                }}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> 팀
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-0.5 max-h-[520px] overflow-y-auto">
+            {departments.map((dept) => {
+              const deptTeams = teams.filter((t) => t.departmentId === dept.id);
+              const isExpanded = expandedDeptIds.has(dept.id);
+              const isDeptSelected = selectedDeptId === dept.id;
+              const isDeptEditing = editingDeptId === dept.id;
+
+              return (
+                <div key={dept.id}>
+                  {/* 부서 행 */}
+                  <div
+                    className={`flex items-center gap-1.5 rounded px-2 py-1 cursor-pointer transition-colors ${isDeptSelected ? "bg-accent" : "hover:bg-muted/50"}`}
+                    onClick={() => {
+                      if (!isDeptEditing) {
+                        setSelectedDeptId(dept.id);
+                        setSelectedTeamId(null);
+                        toggleDeptExpand(dept.id);
+                      }
+                    }}
+                  >
+                    <ChevronRight
+                      className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                    />
+                    {isDeptEditing ? (
+                      <input
+                        value={dept.name}
+                        onChange={(e) => setDepartments((p) => p.map((d) => d.id === dept.id ? { ...d, name: e.target.value } : d))}
+                        placeholder="부서명 입력"
+                        className={inputClass}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm font-medium">{dept.name}</span>
+                        <span className="text-xs text-muted-foreground">{deptTeams.length}팀</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* 팀 행 (확장 시) */}
+                  {isExpanded && deptTeams.map((team) => {
+                    const isTeamSelected = selectedTeamId === team.id;
+                    const isTeamEditing = editingTeamId === team.id;
+                    return (
+                      <div
+                        key={team.id}
+                        className={`flex items-center gap-1.5 rounded pl-8 pr-2 py-1 cursor-pointer transition-colors ${isTeamSelected ? "bg-accent" : "hover:bg-muted/50"}`}
+                        onClick={() => {
+                          if (!isTeamEditing) {
+                            setSelectedTeamId(team.id);
+                            setSelectedDeptId(null);
+                          }
+                        }}
+                      >
+                        <span className="text-muted-foreground text-xs shrink-0">└</span>
+                        {isTeamEditing ? (
+                          <div className="flex-1 space-y-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              value={team.name}
+                              onChange={(e) => setTeams((p) => p.map((t) => t.id === team.id ? { ...t, name: e.target.value } : t))}
+                              placeholder="팀명 입력"
+                              className={inputClass}
+                              autoFocus
+                            />
+                            <input
+                              value={team.leaderName ?? ""}
+                              onChange={(e) => setTeams((p) => p.map((t) => t.id === team.id ? { ...t, leaderName: e.target.value || null } : t))}
+                              placeholder="팀장 이름 (선택사항)"
+                              className={inputClass}
+                            />
+                            <select
+                              value={team.defaultDutyName ?? ""}
+                              onChange={(e) => setTeams((p) => p.map((t) => t.id === team.id ? { ...t, defaultDutyName: e.target.value || null } : t))}
+                              className={selectClass}
+                            >
+                              <option value="">기본 직무 (선택사항)</option>
+                              {duties.map((d) => (
+                                <option key={d.id} value={d.name}>{d.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-sm">{team.name}</span>
+                            {team.leaderName && (
+                              <span className="text-xs text-muted-foreground">{team.leaderName}</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* 확장됐는데 팀 없을 때 */}
+                  {isExpanded && deptTeams.length === 0 && (
+                    <p className="pl-8 py-0.5 text-xs text-muted-foreground">등록된 팀 없음</p>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 부서 미배정 팀 */}
+            {teams.filter((t) => !t.departmentId).map((team) => {
+              const isTeamSelected = selectedTeamId === team.id;
+              const isTeamEditing = editingTeamId === team.id;
+              return (
+                <div
+                  key={team.id}
+                  className={`flex items-center gap-1.5 rounded px-2 py-1 cursor-pointer transition-colors ${isTeamSelected ? "bg-accent" : "hover:bg-muted/50"}`}
+                  onClick={() => { if (!isTeamEditing) { setSelectedTeamId(team.id); setSelectedDeptId(null); } }}
+                >
+                  {isTeamEditing ? (
+                    <div className="flex-1 space-y-1" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        value={team.name}
+                        onChange={(e) => setTeams((p) => p.map((t) => t.id === team.id ? { ...t, name: e.target.value } : t))}
+                        placeholder="팀명 입력"
+                        className={inputClass}
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <span className="flex-1 text-sm text-muted-foreground">{team.name} (미배정)</span>
+                  )}
+                </div>
+              );
+            })}
+
+            {departments.length === 0 && teams.length === 0 && (
+              <p className="text-xs text-muted-foreground py-4 text-center">등록된 부서/팀이 없습니다.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 직급 카드 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold">직급 <span className="font-normal text-muted-foreground">({positions.length})</span></CardTitle>
+            <div className="flex gap-1">
+              {editingPosId ? (
+                <Button size="sm" variant="outline" onClick={() => cancelPos(editingPosId)}>
+                  <X className="h-3.5 w-3.5 mr-1" /> 취소
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline"
+                  disabled={!selectedPosId}
+                  onClick={() => { const p = positions.find(x => x.id === selectedPosId); if (p) startEditPos(p); }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
+                </Button>
+              )}
+              <Button size="sm" variant="outline"
+                disabled={!selectedPosId || !!editingPosId}
+                className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
+                onClick={() => { if (selectedPosId) { deletePos(selectedPosId); setSelectedPosId(null); } }}>
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
+              </Button>
+              <Button size="sm"
+                disabled={!editingPosId}
+                onClick={() => { const p = positions.find(x => x.id === editingPosId); if (p) savePos(p); }}>
+                <Save className="h-3.5 w-3.5 mr-1" /> 저장
+              </Button>
+              <Button size="sm" variant="outline" disabled={!!editingPosId} onClick={addPos}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> 추가
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-0.5">
+            {positions.map((pos) => (
+              <div
+                key={pos.id}
+                className={`flex items-center gap-2 rounded px-2 py-1 cursor-pointer transition-colors ${selectedPosId === pos.id ? "bg-accent" : "hover:bg-muted/50"}`}
+                onClick={() => editingPosId !== pos.id && setSelectedPosId(pos.id)}
+              >
+                {editingPosId === pos.id ? (
+                  <input
+                    value={pos.name}
+                    onChange={(e) => setPositions((p) => p.map((x) => x.id === pos.id ? { ...x, name: e.target.value } : x))}
+                    placeholder="직급명 입력"
+                    className={inputClass}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="flex-1 text-sm">{pos.name}</span>
+                )}
+              </div>
+            ))}
+            {positions.length === 0 && (
+              <p className="text-xs text-muted-foreground py-2">등록된 직급이 없습니다.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 직무 카드 */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold">직무 <span className="font-normal text-muted-foreground">({duties.length})</span></CardTitle>
+            <div className="flex gap-1">
+              {editingDutyId ? (
+                <Button size="sm" variant="outline" onClick={() => cancelDuty(editingDutyId)}>
+                  <X className="h-3.5 w-3.5 mr-1" /> 취소
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline"
+                  disabled={!selectedDutyId}
+                  onClick={() => { const d = duties.find(x => x.id === selectedDutyId); if (d) startEditDuty(d); }}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
+                </Button>
+              )}
+              <Button size="sm" variant="outline"
+                disabled={!selectedDutyId || !!editingDutyId}
+                className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
+                onClick={() => { if (selectedDutyId) { deleteDuty(selectedDutyId); setSelectedDutyId(null); } }}>
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
+              </Button>
+              <Button size="sm"
+                disabled={!editingDutyId}
+                onClick={() => { const d = duties.find(x => x.id === editingDutyId); if (d) saveDuty(d); }}>
+                <Save className="h-3.5 w-3.5 mr-1" /> 저장
+              </Button>
+              <Button size="sm" variant="outline" disabled={!!editingDutyId} onClick={addDuty}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> 추가
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-0.5">
+            {duties.map((duty) => (
+              <div
+                key={duty.id}
+                className={`flex items-center gap-2 rounded px-2 py-1 cursor-pointer transition-colors ${selectedDutyId === duty.id ? "bg-accent" : "hover:bg-muted/50"}`}
+                onClick={() => editingDutyId !== duty.id && setSelectedDutyId(duty.id)}
+              >
+                {editingDutyId === duty.id ? (
+                  <input
+                    value={duty.name}
+                    onChange={(e) => setDuties((p) => p.map((d) => d.id === duty.id ? { ...d, name: e.target.value } : d))}
+                    placeholder="직무명 입력"
+                    className={inputClass}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="flex-1 text-sm">{duty.name}</span>
+                )}
+              </div>
+            ))}
+            {duties.length === 0 && (
+              <p className="text-xs text-muted-foreground py-2">등록된 직무가 없습니다.</p>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </>
   );

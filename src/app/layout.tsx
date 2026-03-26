@@ -4,8 +4,9 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CarbonOS – ESG Carbon Management",
+  title: "ENVIO – ESG Carbon Management",
   description: "AI-native carbon and ESG management platform",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

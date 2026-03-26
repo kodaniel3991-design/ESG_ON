@@ -177,7 +177,7 @@ export const NAV_ITEMS: NavItem[] = [
           link("/settings/users", "사용자 관리"),
           link("/settings/roles", "권한 관리"),
           link("/settings/integrations", "데이터 연동 설정"),
-          link("/settings/employee-roster", "직원명부"),
+          link("/settings/employee-roster", "임/직원 관리"),
           link("/settings/api-keys", "API 키 관리"),
           link("/settings/system", "시스템 설정"),
         ],
@@ -254,7 +254,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   "/settings/users": "사용자 관리",
   "/settings/roles": "권한 관리",
   "/settings/integrations": "데이터 연동 설정",
-  "/settings/employee-roster": "직원명부",
+  "/settings/employee-roster": "임/직원 관리",
   "/settings/api-keys": "API 키 관리",
   "/settings/system": "시스템 설정",
 };
