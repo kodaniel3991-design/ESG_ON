@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPool, sql } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 // GET /api/activity?facilityId=xxx&year=2024
 export async function GET(req: NextRequest) {
@@ -9,20 +9,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "facilityId is required" }, { status: 400 });
   }
   try {
-    const pool = await getPool();
-    const request = pool.request();
-    request.input("facilityId", sql.NVarChar(50), facilityId);
-    request.input("year", sql.Int, parseInt(year));
-    const result = await request.query(`
-      SELECT month, activity_value
-      FROM activity_data
-      WHERE facility_id = @facilityId AND year = @year
-      ORDER BY month
-    `);
+    const rows = await prisma.activityData.findMany({
+      where: { facilityId, year: parseInt(year) },
+      orderBy: { month: "asc" },
+    });
 
     const values = Array(12).fill(0);
-    for (const row of result.recordset) {
-      values[row.month - 1] = Number(row.activity_value);
+    for (const row of rows) {
+      values[row.month - 1] = Number(row.activityValue);
     }
     return NextResponse.json({ facilityId, year: parseInt(year), values });
   } catch (err: any) {
@@ -44,27 +38,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    const pool = await getPool();
-
     for (let month = 1; month <= 12; month++) {
       const val = body.values[month - 1] ?? 0;
-      const req2 = pool.request();
-      req2.input("facilityId", sql.NVarChar(50), body.facilityId);
-      req2.input("year", sql.Int, body.year);
-      req2.input("month", sql.Int, month);
-      req2.input("value", sql.Decimal(18, 6), val);
-      await req2.query(`
-        MERGE activity_data AS target
-        USING (SELECT @facilityId AS facility_id, @year AS year, @month AS month) AS source
-          ON target.facility_id = source.facility_id
-         AND target.year = source.year
-         AND target.month = source.month
-        WHEN MATCHED THEN
-          UPDATE SET activity_value = @value, updated_at = GETDATE()
-        WHEN NOT MATCHED THEN
-          INSERT (facility_id, year, month, activity_value)
-          VALUES (@facilityId, @year, @month, @value);
-      `);
+      await prisma.activityData.upsert({
+        where: {
+          uq_activity_data: {
+            facilityId: body.facilityId,
+            year: body.year,
+            month,
+          },
+        },
+        update: { activityValue: val },
+        create: {
+          facilityId: body.facilityId,
+          year: body.year,
+          month,
+          activityValue: val,
+        },
+      });
     }
 
     return NextResponse.json({ ok: true });

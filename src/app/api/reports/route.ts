@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPool, sql } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 // GET /api/reports?type=list|compliance|mappings
 export async function GET(req: NextRequest) {
   try {
-    const pool = await getPool();
     const type = req.nextUrl.searchParams.get("type") ?? "list";
 
     if (type === "list") {
-      const result = await pool.request().query(`
-        SELECT id, title, type, period, status, framework, version, published_at, created_at
-        FROM esg_reports ORDER BY created_at DESC;
-      `);
+      const reports = await prisma.esgReport.findMany({ orderBy: { createdAt: "desc" } });
       return NextResponse.json(
-        result.recordset.map((r: any) => ({
+        reports.map((r) => ({
           id: r.id,
           title: r.title,
           type: r.type,
@@ -21,42 +17,40 @@ export async function GET(req: NextRequest) {
           status: r.status,
           framework: r.framework,
           version: r.version,
-          publishedAt: r.published_at,
-          createdAt: r.created_at,
+          publishedAt: r.publishedAt,
+          createdAt: r.createdAt,
         }))
       );
     }
 
     if (type === "compliance") {
-      const result = await pool.request().query(`
-        SELECT id, framework, requirement, status, due_date, last_checked
-        FROM compliance_items ORDER BY framework, requirement;
-      `);
+      const items = await prisma.complianceItem.findMany({
+        orderBy: [{ framework: "asc" }, { requirement: "asc" }],
+      });
       return NextResponse.json(
-        result.recordset.map((r: any) => ({
+        items.map((r) => ({
           id: r.id,
           framework: r.framework,
           requirement: r.requirement,
           status: r.status,
-          dueDate: r.due_date,
-          lastChecked: r.last_checked,
+          dueDate: r.dueDate,
+          lastChecked: r.lastChecked,
         }))
       );
     }
 
     if (type === "mappings") {
-      const result = await pool.request().query(`
-        SELECT id, kpi_code, kpi_name, kpi_category, framework, disclosure_code, status
-        FROM kpi_disclosure_mappings ORDER BY framework, kpi_code;
-      `);
+      const mappings = await prisma.kpiDisclosureMapping.findMany({
+        orderBy: [{ framework: "asc" }, { kpiCode: "asc" }],
+      });
       return NextResponse.json(
-        result.recordset.map((r: any) => ({
+        mappings.map((r) => ({
           id: r.id,
-          kpiCode: r.kpi_code,
-          kpiName: r.kpi_name,
-          kpiCategory: r.kpi_category,
+          kpiCode: r.kpiCode,
+          kpiName: r.kpiName,
+          kpiCategory: r.kpiCategory,
           framework: r.framework,
-          disclosureCode: r.disclosure_code,
+          disclosureCode: r.disclosureCode,
           status: r.status,
         }))
       );
@@ -72,55 +66,55 @@ export async function GET(req: NextRequest) {
 // POST /api/reports — save report or compliance item
 export async function POST(req: NextRequest) {
   try {
-    const pool = await getPool();
     const body = await req.json();
     const { action } = body;
 
     if (action === "save-report") {
       const { item } = body;
-      const r = pool.request();
-      r.input("id", sql.NVarChar(36), item.id);
-      r.input("title", sql.NVarChar(255), item.title);
-      r.input("type", sql.NVarChar(50), item.type);
-      r.input("period", sql.NVarChar(50), item.period);
-      r.input("status", sql.NVarChar(50), item.status ?? "draft");
-      r.input("framework", sql.NVarChar(50), item.framework ?? null);
-      r.input("version", sql.NVarChar(50), item.version ?? null);
-
-      await r.query(`
-        MERGE esg_reports AS target
-        USING (SELECT @id AS id) AS source ON target.id = source.id
-        WHEN MATCHED THEN UPDATE SET
-          title = @title, type = @type, period = @period,
-          status = @status, framework = @framework, version = @version,
-          updated_at = GETDATE()
-        WHEN NOT MATCHED THEN
-          INSERT (id, title, type, period, status, framework, version)
-          VALUES (@id, @title, @type, @period, @status, @framework, @version);
-      `);
+      await prisma.esgReport.upsert({
+        where: { id: item.id },
+        update: {
+          title: item.title,
+          type: item.type,
+          period: item.period,
+          status: item.status ?? "draft",
+          framework: item.framework ?? null,
+          version: item.version ?? null,
+        },
+        create: {
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          period: item.period,
+          status: item.status ?? "draft",
+          framework: item.framework ?? null,
+          version: item.version ?? null,
+        },
+      });
       return NextResponse.json({ ok: true });
     }
 
     if (action === "save-compliance") {
       const { items } = body as { items: any[] };
       for (const item of items) {
-        const r = pool.request();
-        r.input("id", sql.NVarChar(36), item.id);
-        r.input("framework", sql.NVarChar(100), item.framework);
-        r.input("req", sql.NVarChar(255), item.requirement);
-        r.input("status", sql.NVarChar(50), item.status);
-        r.input("due", sql.Date, item.dueDate ?? null);
-
-        await r.query(`
-          MERGE compliance_items AS target
-          USING (SELECT @id AS id) AS source ON target.id = source.id
-          WHEN MATCHED THEN UPDATE SET
-            framework = @framework, requirement = @req, status = @status,
-            due_date = @due, last_checked = GETDATE(), updated_at = GETDATE()
-          WHEN NOT MATCHED THEN
-            INSERT (id, framework, requirement, status, due_date, last_checked)
-            VALUES (@id, @framework, @req, @status, @due, GETDATE());
-        `);
+        await prisma.complianceItem.upsert({
+          where: { id: item.id },
+          update: {
+            framework: item.framework,
+            requirement: item.requirement,
+            status: item.status,
+            dueDate: item.dueDate ? new Date(item.dueDate) : null,
+            lastChecked: new Date(),
+          },
+          create: {
+            id: item.id,
+            framework: item.framework,
+            requirement: item.requirement,
+            status: item.status,
+            dueDate: item.dueDate ? new Date(item.dueDate) : null,
+            lastChecked: new Date(),
+          },
+        });
       }
       return NextResponse.json({ ok: true });
     }

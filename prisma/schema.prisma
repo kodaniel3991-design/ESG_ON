@@ -1,0 +1,580 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ══════════════════════════════════════════════
+// 배출 시설 / 활동량
+// ══════════════════════════════════════════════
+
+model EmissionFacility {
+  id           String               @id
+  scope        Int
+  facilityName String               @map("facility_name") @db.VarChar(200)
+  fuelType     String?              @map("fuel_type") @db.VarChar(100)
+  energyType   String?              @map("energy_type") @db.VarChar(100)
+  activityType String?              @map("activity_type") @db.VarChar(200)
+  unit         String               @db.VarChar(50)
+  dataMethod   String               @map("data_method") @db.VarChar(100)
+  categoryId   String               @default("fixed") @map("category_id") @db.VarChar(50)
+  sortOrder    Int                  @default(0) @map("sort_order")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @default(now()) @updatedAt @map("updated_at")
+
+  activityData    ActivityData[]
+  attachments     ActivityAttachment[]
+
+  @@map("emission_facilities")
+}
+
+model ActivityData {
+  id            Int      @id @default(autoincrement())
+  facilityId    String   @map("facility_id") @db.VarChar(50)
+  year          Int
+  month         Int
+  activityValue Decimal  @default(0) @map("activity_value") @db.Decimal(18, 6)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  facility EmissionFacility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, year, month], name: "uq_activity_data")
+  @@map("activity_data")
+}
+
+model ActivityAttachment {
+  id         Int      @id @default(autoincrement())
+  facilityId String   @map("facility_id") @db.VarChar(50)
+  year       Int
+  month      Int
+  fileName   String   @map("file_name") @db.VarChar(500)
+  fileType   String   @map("file_type") @db.VarChar(200)
+  fileSize   Int      @map("file_size")
+  fileData   Bytes    @map("file_data")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  facility EmissionFacility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@map("activity_attachments")
+}
+
+model EmissionReference {
+  id             String   @id @db.VarChar(50)
+  scope          Int
+  categoryId     String   @map("category_id") @db.VarChar(50)
+  sourceName     String   @map("source_name") @db.VarChar(200)
+  fuelType       String?  @map("fuel_type") @db.VarChar(100)
+  energyType     String?  @map("energy_type") @db.VarChar(100)
+  activityType   String?  @map("activity_type") @db.VarChar(200)
+  unit           String   @db.VarChar(50)
+  emissionFactor Decimal  @default(0) @map("emission_factor") @db.Decimal(18, 6)
+  factorSource   String?  @map("factor_source") @db.VarChar(500)
+  status         String   @default("active") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("emission_references")
+}
+
+// ══════════════════════════════════════════════
+// 배출계수 출처 / 마스터
+// ══════════════════════════════════════════════
+
+model EmissionFactorSource {
+  id           Int      @id @default(autoincrement())
+  sourceCode   String   @unique @map("source_code") @db.VarChar(50)
+  publisher    String   @db.VarChar(200)
+  documentName String   @map("document_name") @db.VarChar(500)
+  documentUrl  String?  @map("document_url") @db.VarChar(1000)
+  country      String   @default("KR") @db.VarChar(10)
+  year         Int
+  version      String?  @db.VarChar(100)
+  notes        String?  @db.VarChar(1000)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  factors EmissionFactorMaster[]
+
+  @@map("emission_factor_source")
+}
+
+model EmissionFactorMaster {
+  id                  Int      @id @default(autoincrement())
+  factorCode          String   @unique @map("factor_code") @db.VarChar(50)
+  scope               Int
+  categoryCode        String?  @map("category_code") @db.VarChar(50)
+  fuelCode            String?  @map("fuel_code") @db.VarChar(100)
+  sourceType          String?  @map("source_type") @db.VarChar(50)
+  country             String   @default("KR") @db.VarChar(10)
+  year                Int
+  sourceName          String   @map("source_name") @db.VarChar(500)
+  sourceVersion       String?  @map("source_version") @db.VarChar(100)
+  validFrom           DateTime? @map("valid_from") @db.Date
+  validTo             DateTime? @map("valid_to") @db.Date
+  calculationMethod   String?  @map("calculation_method") @db.VarChar(100)
+  co2Factor           Decimal? @map("co2_factor") @db.Decimal(20, 10)
+  co2FactorUnit       String?  @map("co2_factor_unit") @db.VarChar(50)
+  ch4Factor           Decimal? @map("ch4_factor") @db.Decimal(20, 10)
+  ch4FactorUnit       String?  @map("ch4_factor_unit") @db.VarChar(50)
+  n2oFactor           Decimal? @map("n2o_factor") @db.Decimal(20, 10)
+  n2oFactorUnit       String?  @map("n2o_factor_unit") @db.VarChar(50)
+  ncv                 Decimal? @db.Decimal(20, 8)
+  ncvUnit             String?  @map("ncv_unit") @db.VarChar(50)
+  carbonContentFactor Decimal? @map("carbon_content_factor") @db.Decimal(20, 8)
+  oxidationFactor     Decimal? @default(1.0) @map("oxidation_factor") @db.Decimal(10, 6)
+  gwpCh4              Decimal? @default(28.0) @map("gwp_ch4") @db.Decimal(10, 4)
+  gwpN2o              Decimal? @default(265.0) @map("gwp_n2o") @db.Decimal(10, 4)
+  sourceId            Int?     @map("source_id")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  source EmissionFactorSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@map("emission_factor_master")
+}
+
+// ══════════════════════════════════════════════
+// 조직 / 사업장 / 직원
+// ══════════════════════════════════════════════
+
+model Organization {
+  id               Int      @id @default(autoincrement())
+  organizationName String   @default("조직") @map("organization_name") @db.VarChar(200)
+  address          String   @default("") @db.VarChar(500)
+  addressDetail    String?  @map("address_detail") @db.VarChar(200)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+
+  worksites Worksite[]
+
+  @@map("organizations")
+}
+
+model Worksite {
+  id             String   @id @db.VarChar(50)
+  organizationId Int      @map("organization_id")
+  name           String   @db.VarChar(200)
+  address        String   @default("") @db.VarChar(500)
+  addressDetail  String?  @map("address_detail") @db.VarChar(200)
+  isDefault      Boolean  @default(false) @map("is_default")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    Employee[]
+
+  @@map("worksites")
+}
+
+model Employee {
+  id                    String    @id @db.VarChar(50)
+  worksiteId            String?   @map("worksite_id") @db.VarChar(50)
+  department            String?   @db.VarChar(100)
+  team                  String?   @db.VarChar(100)
+  subTeam               String?   @map("sub_team") @db.VarChar(100)
+  name                  String    @db.VarChar(100)
+  employeeId            String?   @map("employee_id") @db.VarChar(50)
+  jobTitle              String?   @map("job_title") @db.VarChar(100)
+  position              String?   @db.VarChar(100)
+  jobPosition           String?   @map("job_position") @db.VarChar(100)
+  isManager             Boolean?  @map("is_manager")
+  employmentStatus      String?   @map("employment_status") @db.VarChar(50)
+  employmentType        String?   @map("employment_type") @db.VarChar(50)
+  hireDate              DateTime? @map("hire_date") @db.Date
+  terminationDate       DateTime? @map("termination_date") @db.Date
+  leaveStartDate        DateTime? @map("leave_start_date") @db.Date
+  leaveEndDate          DateTime? @map("leave_end_date") @db.Date
+  referenceDate         DateTime? @map("reference_date") @db.Date
+  gender                String?   @db.VarChar(20)
+  birthYear             Int?      @map("birth_year")
+  nationality           String?   @db.VarChar(100)
+  isForeigner           Boolean?  @map("is_foreigner")
+  isDisabled            Boolean?  @map("is_disabled")
+  disabilityType        String?   @map("disability_type") @db.VarChar(100)
+  commuteTransport      String?   @map("commute_transport") @db.VarChar(50)
+  fuel                  String?   @db.VarChar(50)
+  workAddress           String?   @map("work_address") @db.VarChar(500)
+  address               String?   @db.VarChar(500)
+  addressDetail         String?   @map("address_detail") @db.VarChar(200)
+  commuteDistanceKm     Decimal?  @map("commute_distance_km") @db.Decimal(10, 3)
+  roundTripDistanceKm   Decimal?  @map("round_trip_distance_km") @db.Decimal(10, 2)
+  workDaysPerMonth      Int?      @map("work_days_per_month")
+  monthlyCommuteEmission Decimal? @map("monthly_commute_emission") @db.Decimal(12, 4)
+  dataSource            String?   @map("data_source") @db.VarChar(50)
+  evidenceFileId        String?   @map("evidence_file_id") @db.VarChar(100)
+  memo                  String?
+  createdBy             String?   @map("created_by") @db.VarChar(100)
+  updatedBy             String?   @map("updated_by") @db.VarChar(100)
+  sortOrder             Int       @default(0) @map("sort_order")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  worksite Worksite? @relation(fields: [worksiteId], references: [id], onDelete: SetNull)
+
+  @@map("employees")
+}
+
+// ══════════════════════════════════════════════
+// KPI
+// ══════════════════════════════════════════════
+
+model KpiMaster {
+  id             String   @id @db.VarChar(36)
+  code           String   @unique @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  category       String   @db.VarChar(50)
+  unit           String   @db.VarChar(50)
+  description    String?
+  reportIncluded Boolean  @default(true) @map("report_included")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  targets     KpiTarget[]
+  performance KpiPerformance[]
+  changeLogs  KpiChangeLog[]
+
+  @@map("kpi_masters")
+}
+
+model KpiTarget {
+  id          String   @id @db.VarChar(36)
+  kpiId       String   @map("kpi_id") @db.VarChar(36)
+  period      String   @db.VarChar(50)
+  targetValue Decimal  @map("target_value") @db.Decimal(18, 6)
+  updatedBy   String?  @map("updated_by") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  kpi KpiMaster @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@unique([kpiId, period], name: "uq_kpi_target")
+  @@map("kpi_targets")
+}
+
+model KpiPerformance {
+  id          String   @id @db.VarChar(36)
+  kpiId       String   @map("kpi_id") @db.VarChar(36)
+  period      String   @db.VarChar(50)
+  actualValue Decimal  @map("actual_value") @db.Decimal(18, 6)
+  updatedBy   String?  @map("updated_by") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  kpi KpiMaster @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@unique([kpiId, period], name: "uq_kpi_perf")
+  @@map("kpi_performance")
+}
+
+model KpiChangeLog {
+  id        String   @id @db.VarChar(36)
+  kpiId     String   @map("kpi_id") @db.VarChar(36)
+  field     String   @db.VarChar(100)
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  changedBy String   @map("changed_by") @db.VarChar(255)
+  changedAt DateTime @default(now()) @map("changed_at")
+
+  kpi KpiMaster @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@map("kpi_change_log")
+}
+
+// ══════════════════════════════════════════════
+// ESG 지표
+// ══════════════════════════════════════════════
+
+model EsgMetric {
+  id            String   @id @db.VarChar(36)
+  esgDomain     String   @map("esg_domain") @db.VarChar(50)
+  category      String   @db.VarChar(100)
+  indicatorName String   @map("indicator_name") @db.VarChar(255)
+  value         Decimal? @db.Decimal(18, 6)
+  unit          String   @db.VarChar(50)
+  period        String   @db.VarChar(50)
+  source        String?  @db.VarChar(255)
+  status        String   @default("pending") @db.VarChar(50)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("esg_metrics")
+}
+
+// ══════════════════════════════════════════════
+// 공급망 / 협력사
+// ══════════════════════════════════════════════
+
+model Vendor {
+  id        String    @id @db.VarChar(36)
+  name      String    @db.VarChar(255)
+  email     String?   @db.VarChar(255)
+  status    String    @default("invited") @db.VarChar(50)
+  tier      Int?
+  category  String?   @db.VarChar(255)
+  riskLevel String?   @map("risk_level") @db.VarChar(50)
+  esgScore  Decimal?  @map("esg_score") @db.Decimal(5, 2)
+  invitedAt DateTime? @map("invited_at")
+  linkedAt  DateTime? @map("linked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  submissions VendorSubmission[]
+  esgScores   VendorEsgScore[]
+
+  @@map("vendors")
+}
+
+model VendorSubmission {
+  id                       String    @id @db.VarChar(36)
+  vendorId                 String    @map("vendor_id") @db.VarChar(36)
+  period                   String    @db.VarChar(50)
+  status                   String    @default("not_started") @db.VarChar(50)
+  scope3CategoriesCompleted Int      @default(0) @map("scope3_categories_completed")
+  scope3CategoriesTotal    Int       @default(0) @map("scope3_categories_total")
+  emissionsTco2e           Decimal?  @map("emissions_tco2e") @db.Decimal(18, 6)
+  submittedAt              DateTime? @map("submitted_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, period], name: "uq_vendor_sub")
+  @@map("vendor_submissions")
+}
+
+model VendorEsgScore {
+  id               String   @id @db.VarChar(36)
+  vendorId         String   @map("vendor_id") @db.VarChar(36)
+  overallScore     Decimal? @map("overall_score") @db.Decimal(5, 2)
+  environmentScore Decimal? @map("environment_score") @db.Decimal(5, 2)
+  socialScore      Decimal? @map("social_score") @db.Decimal(5, 2)
+  governanceScore  Decimal? @map("governance_score") @db.Decimal(5, 2)
+  riskLevel        String?  @map("risk_level") @db.VarChar(50)
+  trend            String?  @db.VarChar(50)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_esg_scores")
+}
+
+// ══════════════════════════════════════════════
+// 보고서 / 컴플라이언스
+// ══════════════════════════════════════════════
+
+model EsgReport {
+  id          String    @id @db.VarChar(36)
+  title       String    @db.VarChar(255)
+  type        String    @db.VarChar(50)
+  period      String    @db.VarChar(50)
+  status      String    @default("draft") @db.VarChar(50)
+  framework   String?   @db.VarChar(50)
+  version     String?   @db.VarChar(50)
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@map("esg_reports")
+}
+
+model ComplianceItem {
+  id          String    @id @db.VarChar(36)
+  framework   String    @db.VarChar(100)
+  requirement String    @db.VarChar(255)
+  status      String    @default("non_compliant") @db.VarChar(50)
+  dueDate     DateTime? @map("due_date") @db.Date
+  lastChecked DateTime? @map("last_checked")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@map("compliance_items")
+}
+
+model KpiDisclosureMapping {
+  id             String   @id @db.VarChar(36)
+  kpiCode        String   @map("kpi_code") @db.VarChar(50)
+  kpiName        String   @map("kpi_name") @db.VarChar(255)
+  kpiCategory    String   @map("kpi_category") @db.VarChar(50)
+  framework      String   @db.VarChar(50)
+  disclosureCode String   @map("disclosure_code") @db.VarChar(100)
+  status         String   @default("unlinked") @db.VarChar(50)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("kpi_disclosure_mappings")
+}
+
+// ══════════════════════════════════════════════
+// 중대성 평가
+// ══════════════════════════════════════════════
+
+model MaterialityIssue {
+  id                  String   @id @db.VarChar(36)
+  code                String   @db.VarChar(50)
+  name                String   @db.VarChar(255)
+  dimension           String   @db.VarChar(50)
+  description         String?
+  expertScore         Decimal  @default(3.0) @map("expert_score") @db.Decimal(3, 2)
+  benchmarkScore      Decimal  @default(3.0) @map("benchmark_score") @db.Decimal(3, 2)
+  kpiLinkedCount      Int      @default(0) @map("kpi_linked_count")
+  kpiConnectionStatus String?  @map("kpi_connection_status") @db.VarChar(50)
+  impactScore         Decimal? @map("impact_score") @db.Decimal(4, 2)
+  stakeholderScore    Decimal? @map("stakeholder_score") @db.Decimal(4, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("materiality_issues")
+}
+
+// ══════════════════════════════════════════════
+// 탄소 감축 프로젝트
+// ══════════════════════════════════════════════
+
+model ReductionProject {
+  id                   String    @id @db.VarChar(36)
+  name                 String    @db.VarChar(255)
+  category             String    @db.VarChar(50)
+  scope                String    @db.VarChar(50)
+  owner                String?   @db.VarChar(255)
+  status               String    @default("planning") @db.VarChar(50)
+  expectedReductionMt  Decimal?  @map("expected_reduction_mt") @db.Decimal(18, 6)
+  actualReductionMt    Decimal?  @map("actual_reduction_mt") @db.Decimal(18, 6)
+  estimatedCostM       Decimal?  @map("estimated_cost_m") @db.Decimal(18, 6)
+  startDate            DateTime? @map("start_date") @db.Date
+  endDate              DateTime? @map("end_date") @db.Date
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@map("reduction_projects")
+}
+
+// ══════════════════════════════════════════════
+// 사용자 / 역할
+// ══════════════════════════════════════════════
+
+model Role {
+  id          String   @id @db.VarChar(36)
+  name        String   @db.VarChar(255)
+  description String?
+  systemCode  String?  @map("system_code") @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id          String    @id @db.VarChar(36)
+  name        String    @db.VarChar(255)
+  email       String    @unique @db.VarChar(255)
+  department  String?   @db.VarChar(255)
+  jobTitle    String?   @map("job_title") @db.VarChar(255)
+  roleId      String?   @map("role_id") @db.VarChar(36)
+  status      String    @default("active") @db.VarChar(50)
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  role Role? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@map("users")
+}
+
+// ══════════════════════════════════════════════
+// 데이터 검증 / 승인
+// ══════════════════════════════════════════════
+
+model DataValidation {
+  id             String    @id @db.VarChar(36)
+  scope          String    @db.VarChar(50)
+  category       String    @db.VarChar(255)
+  emissionSource String    @map("emission_source") @db.VarChar(255)
+  site           String    @db.VarChar(255)
+  period         String    @db.VarChar(50)
+  activityAmount String?   @map("activity_amount") @db.VarChar(255)
+  emissions      String?   @db.VarChar(255)
+  status         String    @default("submitted") @db.VarChar(50)
+  aiVerification String?   @map("ai_verification") @db.VarChar(50)
+  dataSource     String?   @map("data_source") @db.VarChar(100)
+  evidenceCount  Int       @default(0) @map("evidence_count")
+  submittedBy    String?   @map("submitted_by") @db.VarChar(255)
+  submittedAt    DateTime? @map("submitted_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  approvals DataApproval[]
+
+  @@map("data_validations")
+}
+
+model DataApproval {
+  id           String    @id @db.VarChar(36)
+  validationId String    @map("validation_id") @db.VarChar(36)
+  status       String    @default("pending_approval") @db.VarChar(50)
+  approver     String?   @db.VarChar(255)
+  comment      String?
+  approvedAt   DateTime? @map("approved_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  validation DataValidation @relation(fields: [validationId], references: [id], onDelete: Cascade)
+
+  @@map("data_approvals")
+}
+
+// ══════════════════════════════════════════════
+// 조직 구조 (부서 / 팀 / 직급 / 직무)
+// ══════════════════════════════════════════════
+
+model OrgDepartment {
+  id        String    @id @db.VarChar(50)
+  name      String    @db.VarChar(100)
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  teams OrgTeam[]
+
+  @@map("org_departments")
+}
+
+model OrgTeam {
+  id              String        @id @db.VarChar(50)
+  departmentId    String?       @map("department_id") @db.VarChar(50)
+  name            String        @db.VarChar(100)
+  leaderName      String?       @map("leader_name") @db.VarChar(100)
+  defaultDutyName String?       @map("default_duty_name") @db.VarChar(100)
+  sortOrder       Int           @default(0) @map("sort_order")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  department OrgDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@map("org_teams")
+}
+
+model OrgPosition {
+  id        String   @id @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("org_positions")
+}
+
+model OrgDuty {
+  id        String   @id @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("org_duties")
+}

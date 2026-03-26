@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPool, sql } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const facilityId = req.nextUrl.searchParams.get("facilityId");
@@ -8,17 +8,33 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "facilityId and year are required" }, { status: 400 });
   }
   try {
-    const pool = await getPool();
-    const r = pool.request();
-    r.input("facilityId", sql.NVarChar(50), facilityId);
-    r.input("year", sql.Int, parseInt(year));
-    const result = await r.query(`
-      SELECT id, facility_id, year, month, file_name, file_type, file_size, created_at
-      FROM activity_attachments
-      WHERE facility_id = @facilityId AND year = @year
-      ORDER BY month, id
-    `);
-    return NextResponse.json(result.recordset);
+    const attachments = await prisma.activityAttachment.findMany({
+      where: { facilityId, year: parseInt(year) },
+      select: {
+        id: true,
+        facilityId: true,
+        year: true,
+        month: true,
+        fileName: true,
+        fileType: true,
+        fileSize: true,
+        createdAt: true,
+      },
+      orderBy: [{ month: "asc" }, { id: "asc" }],
+    });
+
+    return NextResponse.json(
+      attachments.map((a) => ({
+        id: a.id,
+        facility_id: a.facilityId,
+        year: a.year,
+        month: a.month,
+        file_name: a.fileName,
+        file_type: a.fileType,
+        file_size: a.fileSize,
+        created_at: a.createdAt,
+      }))
+    );
   } catch (err: any) {
     console.error("[GET /api/attachments]", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -38,22 +54,33 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const pool = await getPool();
-    const r = pool.request();
-    r.input("facilityId", sql.NVarChar(50), facilityId);
-    r.input("year", sql.Int, parseInt(year));
-    r.input("month", sql.Int, parseInt(month));
-    r.input("fileName", sql.NVarChar(500), file.name);
-    r.input("fileType", sql.NVarChar(200), file.type || "application/octet-stream");
-    r.input("fileSize", sql.Int, file.size);
-    r.input("fileData", sql.VarBinary(sql.MAX), buffer);
 
-    const result = await r.query(`
-      INSERT INTO activity_attachments (facility_id, year, month, file_name, file_type, file_size, file_data)
-      OUTPUT INSERTED.id, INSERTED.file_name, INSERTED.file_type, INSERTED.file_size, INSERTED.month
-      VALUES (@facilityId, @year, @month, @fileName, @fileType, @fileSize, @fileData)
-    `);
-    return NextResponse.json(result.recordset[0]);
+    const created = await prisma.activityAttachment.create({
+      data: {
+        facilityId,
+        year: parseInt(year),
+        month: parseInt(month),
+        fileName: file.name,
+        fileType: file.type || "application/octet-stream",
+        fileSize: file.size,
+        fileData: buffer,
+      },
+      select: {
+        id: true,
+        fileName: true,
+        fileType: true,
+        fileSize: true,
+        month: true,
+      },
+    });
+
+    return NextResponse.json({
+      id: created.id,
+      file_name: created.fileName,
+      file_type: created.fileType,
+      file_size: created.fileSize,
+      month: created.month,
+    });
   } catch (err: any) {
     console.error("[POST /api/attachments]", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

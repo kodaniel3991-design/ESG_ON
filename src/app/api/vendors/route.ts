@@ -1,75 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPool, sql } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 // GET /api/vendors?type=list|submissions|esg-scores
 export async function GET(req: NextRequest) {
   try {
-    const pool = await getPool();
     const type = req.nextUrl.searchParams.get("type") ?? "list";
 
     if (type === "list") {
-      const result = await pool.request().query(`
-        SELECT id, name, email, status, tier, category, risk_level, esg_score,
-               invited_at, linked_at, created_at
-        FROM vendors ORDER BY name;
-      `);
+      const vendors = await prisma.vendor.findMany({ orderBy: { name: "asc" } });
       return NextResponse.json(
-        result.recordset.map((r: any) => ({
+        vendors.map((r) => ({
           id: r.id,
           name: r.name,
           email: r.email,
           status: r.status,
           tier: r.tier,
           category: r.category,
-          riskLevel: r.risk_level,
-          esgScore: r.esg_score != null ? parseFloat(r.esg_score) : null,
-          invitedAt: r.invited_at,
-          linkedAt: r.linked_at,
+          riskLevel: r.riskLevel,
+          esgScore: r.esgScore != null ? parseFloat(String(r.esgScore)) : null,
+          invitedAt: r.invitedAt,
+          linkedAt: r.linkedAt,
         }))
       );
     }
 
     if (type === "submissions") {
-      const result = await pool.request().query(`
-        SELECT s.id, s.vendor_id, v.name AS vendor_name, s.period, s.status,
-               s.scope3_categories_completed, s.scope3_categories_total,
-               s.emissions_tco2e, s.submitted_at
-        FROM vendor_submissions s JOIN vendors v ON s.vendor_id = v.id
-        ORDER BY v.name, s.period;
-      `);
+      const submissions = await prisma.vendorSubmission.findMany({
+        include: { vendor: true },
+        orderBy: [{ vendor: { name: "asc" } }, { period: "asc" }],
+      });
       return NextResponse.json(
-        result.recordset.map((r: any) => ({
+        submissions.map((r) => ({
           id: r.id,
-          vendorId: r.vendor_id,
-          vendorName: r.vendor_name,
+          vendorId: r.vendorId,
+          vendorName: r.vendor.name,
           period: r.period,
           status: r.status,
-          scope3CategoriesCompleted: r.scope3_categories_completed,
-          scope3CategoriesTotal: r.scope3_categories_total,
-          emissionsTco2e: r.emissions_tco2e != null ? parseFloat(r.emissions_tco2e) : null,
-          submittedAt: r.submitted_at,
+          scope3CategoriesCompleted: r.scope3CategoriesCompleted,
+          scope3CategoriesTotal: r.scope3CategoriesTotal,
+          emissionsTco2e: r.emissionsTco2e != null ? parseFloat(String(r.emissionsTco2e)) : null,
+          submittedAt: r.submittedAt,
         }))
       );
     }
 
     if (type === "esg-scores") {
-      const result = await pool.request().query(`
-        SELECT s.id, s.vendor_id, v.name AS vendor_name,
-               s.overall_score, s.environment_score, s.social_score,
-               s.governance_score, s.risk_level, s.trend
-        FROM vendor_esg_scores s JOIN vendors v ON s.vendor_id = v.id
-        ORDER BY v.name;
-      `);
+      const scores = await prisma.vendorEsgScore.findMany({
+        include: { vendor: true },
+        orderBy: { vendor: { name: "asc" } },
+      });
       return NextResponse.json(
-        result.recordset.map((r: any) => ({
+        scores.map((r) => ({
           id: r.id,
-          vendorId: r.vendor_id,
-          vendorName: r.vendor_name,
-          overallScore: r.overall_score != null ? parseFloat(r.overall_score) : null,
-          environmentScore: r.environment_score != null ? parseFloat(r.environment_score) : null,
-          socialScore: r.social_score != null ? parseFloat(r.social_score) : null,
-          governanceScore: r.governance_score != null ? parseFloat(r.governance_score) : null,
-          riskLevel: r.risk_level,
+          vendorId: r.vendorId,
+          vendorName: r.vendor.name,
+          overallScore: r.overallScore != null ? parseFloat(String(r.overallScore)) : null,
+          environmentScore: r.environmentScore != null ? parseFloat(String(r.environmentScore)) : null,
+          socialScore: r.socialScore != null ? parseFloat(String(r.socialScore)) : null,
+          governanceScore: r.governanceScore != null ? parseFloat(String(r.governanceScore)) : null,
+          riskLevel: r.riskLevel,
           trend: r.trend,
         }))
       );
@@ -85,42 +74,40 @@ export async function GET(req: NextRequest) {
 // POST /api/vendors — CRUD
 export async function POST(req: NextRequest) {
   try {
-    const pool = await getPool();
     const body = await req.json();
     const { action } = body;
 
     if (action === "save") {
       const { items } = body as { items: any[] };
       for (const item of items) {
-        const r = pool.request();
-        r.input("id", sql.NVarChar(36), item.id);
-        r.input("name", sql.NVarChar(255), item.name);
-        r.input("email", sql.NVarChar(255), item.email ?? null);
-        r.input("status", sql.NVarChar(50), item.status ?? "invited");
-        r.input("tier", sql.Int, item.tier ?? null);
-        r.input("category", sql.NVarChar(255), item.category ?? null);
-        r.input("risk_level", sql.NVarChar(50), item.riskLevel ?? null);
-
-        await r.query(`
-          MERGE vendors AS target
-          USING (SELECT @id AS id) AS source ON target.id = source.id
-          WHEN MATCHED THEN UPDATE SET
-            name = @name, email = @email, status = @status,
-            tier = @tier, category = @category, risk_level = @risk_level,
-            updated_at = GETDATE()
-          WHEN NOT MATCHED THEN
-            INSERT (id, name, email, status, tier, category, risk_level, invited_at)
-            VALUES (@id, @name, @email, @status, @tier, @category, @risk_level, GETDATE());
-        `);
+        await prisma.vendor.upsert({
+          where: { id: item.id },
+          update: {
+            name: item.name,
+            email: item.email ?? null,
+            status: item.status ?? "invited",
+            tier: item.tier ?? null,
+            category: item.category ?? null,
+            riskLevel: item.riskLevel ?? null,
+          },
+          create: {
+            id: item.id,
+            name: item.name,
+            email: item.email ?? null,
+            status: item.status ?? "invited",
+            tier: item.tier ?? null,
+            category: item.category ?? null,
+            riskLevel: item.riskLevel ?? null,
+            invitedAt: new Date(),
+          },
+        });
       }
       return NextResponse.json({ ok: true });
     }
 
     if (action === "delete") {
       const { id } = body;
-      const r = pool.request();
-      r.input("id", sql.NVarChar(36), id);
-      await r.query(`DELETE FROM vendors WHERE id = @id;`);
+      await prisma.vendor.delete({ where: { id } });
       return NextResponse.json({ ok: true });
     }
 
