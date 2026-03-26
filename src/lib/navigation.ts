@@ -53,9 +53,9 @@ export const NAV_ITEMS: NavItem[] = [
       {
         label: "ESG 데이터",
         children: [
-          link("/data/esg/environment", "환경 데이터"),
-          link("/data/esg/social", "사회 데이터"),
-          link("/data/esg/governance", "거버넌스 데이터"),
+          link("/data/esg/environment", "(E)환경 데이터"),
+          link("/data/esg/social", "(S)사회 데이터"),
+          link("/data/esg/governance", "(G)거버넌스 데이터"),
         ],
       },
       {

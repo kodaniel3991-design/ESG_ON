@@ -5,22 +5,27 @@ import { useRouter } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
 
 const SAVED_EMAIL_KEY = "esgon_saved_email";
+const AUTO_LOGIN_KEY = "esgon_auto_login";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [autoLogin, setAutoLogin] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(SAVED_EMAIL_KEY);
-    if (saved) {
-      setEmail(saved);
-      setRemember(true);
-    }
+    const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY);
+    const savedAutoLogin = localStorage.getItem(AUTO_LOGIN_KEY) === "true";
+    if (savedEmail) setEmail(savedEmail);
+    if (savedAutoLogin) setAutoLogin(true);
   }, []);
+
+  function handleAutoLoginChange(checked: boolean) {
+    setAutoLogin(checked);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,7 +36,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, remember }),
+        body: JSON.stringify({ email, password, autoLogin }),
       });
 
       const data = await res.json();
@@ -41,10 +46,15 @@ export default function LoginPage() {
         return;
       }
 
-      if (remember) {
+      if (autoLogin) {
         localStorage.setItem(SAVED_EMAIL_KEY, email);
       } else {
         localStorage.removeItem(SAVED_EMAIL_KEY);
+      }
+      if (autoLogin) {
+        localStorage.setItem(AUTO_LOGIN_KEY, "true");
+      } else {
+        localStorage.removeItem(AUTO_LOGIN_KEY);
       }
 
       router.push("/dashboard");
@@ -66,7 +76,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+        <div className="rounded-2xl border-2 border-border p-8 shadow-sm" style={{ backgroundColor: "#f6fbeb" }}>
           <h1 className="mb-6 text-center text-xl font-semibold">로그인</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,29 +100,66 @@ export default function LoginPage() {
               <label htmlFor="password" className="text-sm font-medium text-foreground">
                 비밀번호
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                id="remember"
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-input accent-primary"
-              />
-              <label htmlFor="remember" className="cursor-pointer text-sm text-muted-foreground">
-                이메일 기억하기
-              </label>
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => handleAutoLoginChange(!autoLogin)}
+                className="flex items-center gap-1.5 text-sm"
+                aria-pressed={autoLogin}
+              >
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors"
+                  style={autoLogin ? { backgroundColor: "#7cc520", borderColor: "#7cc520" } : undefined}
+                >
+                  {autoLogin && (
+                    <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M2 6l3 3 5-5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </span>
+                <span className={autoLogin ? "font-medium text-foreground" : "text-muted-foreground"}>
+                  자동 로그인
+                </span>
+              </button>
             </div>
 
             {error && (
@@ -124,7 +171,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: "#7cc520" }}
+              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "로그인 중..." : "로그인"}
             </button>

@@ -7,10 +7,15 @@ export async function GET(req: NextRequest) {
     const type = req.nextUrl.searchParams.get("type") ?? "master";
 
     if (type === "master") {
-      const masters = await prisma.kpiMaster.findMany({ orderBy: { code: "asc" } });
+      const domain = req.nextUrl.searchParams.get("domain");
+      const masters = await prisma.kpiMaster.findMany({
+        where: domain ? { esgDomain: domain } : undefined,
+        orderBy: { code: "asc" },
+      });
       return NextResponse.json(
         masters.map((r) => ({
           id: r.id,
+          esgDomain: r.esgDomain ?? "",
           code: r.code,
           name: r.name,
           category: r.category,
@@ -98,6 +103,70 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (type === "list") {
+      const period = req.nextUrl.searchParams.get("period") ?? String(new Date().getFullYear());
+      const domain = req.nextUrl.searchParams.get("domain");
+      const masters = await prisma.kpiMaster.findMany({
+        where: domain ? { esgDomain: domain } : undefined,
+        include: {
+          targets: { where: { period } },
+          performance: { where: { period } },
+        },
+        orderBy: { code: "asc" },
+      });
+      return NextResponse.json(
+        masters.map((m) => {
+          const target = m.targets[0];
+          const perf = m.performance[0];
+          const targetVal = target ? parseFloat(String(target.targetValue)) : null;
+          const actualVal = perf ? parseFloat(String(perf.actualValue)) : undefined;
+          const achievement = targetVal && actualVal != null ? Math.round((actualVal / targetVal) * 100) : undefined;
+          const status = achievement == null ? undefined : achievement >= 90 ? "on_track" : achievement >= 70 ? "attention" : "anomaly";
+          const domainMap: Record<string, string> = { environment: "environment", social: "social", governance: "governance" };
+          const category = (m.esgDomain && domainMap[m.esgDomain] ? domainMap[m.esgDomain] : "environment") as any;
+          return {
+            id: m.id,
+            name: m.name,
+            category,
+            unit: m.unit,
+            target: targetVal ?? "—",
+            actual: actualVal,
+            achievementPercent: achievement,
+            period,
+            status,
+            isMissing: perf == null,
+            reportIncluded: m.reportIncluded,
+          };
+        })
+      );
+    }
+
+    if (type === "summary") {
+      const period = req.nextUrl.searchParams.get("period") ?? String(new Date().getFullYear());
+      const masters = await prisma.kpiMaster.findMany({
+        include: {
+          targets: { where: { period } },
+          performance: { where: { period } },
+        },
+      });
+      const total = masters.length;
+      const withTarget = masters.filter((m) => m.targets.length > 0).length;
+      const withPerf = masters.filter((m) => m.performance.length > 0).length;
+      const onTrack = masters.filter((m) => {
+        const t = m.targets[0];
+        const p = m.performance[0];
+        if (!t || !p) return false;
+        const pct = parseFloat(String(p.actualValue)) / parseFloat(String(t.targetValue)) * 100;
+        return pct >= 90;
+      }).length;
+      return NextResponse.json([
+        { label: "전체 KPI", value: total },
+        { label: "목표 설정", value: withTarget },
+        { label: "데이터 입력", value: withPerf },
+        { label: "목표 달성", value: onTrack },
+      ]);
+    }
+
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   } catch (err: any) {
     console.error("[GET /api/kpi]", err);
@@ -117,6 +186,7 @@ export async function POST(req: NextRequest) {
         await prisma.kpiMaster.upsert({
           where: { id: item.id },
           update: {
+            esgDomain: item.esgDomain || null,
             code: item.code,
             name: item.name,
             category: item.category,
@@ -126,6 +196,7 @@ export async function POST(req: NextRequest) {
           },
           create: {
             id: item.id,
+            esgDomain: item.esgDomain || null,
             code: item.code,
             name: item.name,
             category: item.category,

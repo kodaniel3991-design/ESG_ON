@@ -549,14 +549,14 @@ export default function SettingsOrganizationPage() {
                 등록된 사업장이 없습니다. &quot;추가&quot;로 사업장을 등록하세요.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[780px] text-sm">
+              <div>
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="w-36 pb-2 pr-2 font-medium">사업장명</th>
-                      <th className="min-w-[260px] pb-2 pr-2 font-medium">주소</th>
-                      <th className="min-w-[112px] pb-2 pr-2 font-medium">상세주소</th>
-                      <th className="w-20 pb-2 font-medium">기본</th>
+                      <th className="w-28 pb-2 pr-2 font-medium">사업장명</th>
+                      <th className="pb-2 pr-2 font-medium">주소</th>
+                      <th className="w-28 pb-2 pr-2 font-medium">상세주소</th>
+                      <th className="w-16 pb-2 font-medium">기본</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -646,8 +646,8 @@ export default function SettingsOrganizationPage() {
 
         {/* 부서/팀 트리 카드 */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-semibold">부서/팀</CardTitle>
+          <CardHeader className="flex flex-col space-y-2 pb-3">
+            <CardTitle className="text-sm font-semibold">부서/팀 <span className="font-normal text-muted-foreground">({departments.length}부서 {teams.length}팀)</span></CardTitle>
             <CardActionBar
               isEditing={!!(editingDeptId || editingTeamId)}
               hasSelection={!!(selectedDeptId || selectedTeamId)}
@@ -816,7 +816,7 @@ export default function SettingsOrganizationPage() {
 
         {/* 직급 카드 */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardHeader className="flex flex-col space-y-2 pb-3">
             <CardTitle className="text-sm font-semibold">직급 <span className="font-normal text-muted-foreground">({positions.length})</span></CardTitle>
             <CardActionBar
               isEditing={!!editingPosId}
@@ -857,7 +857,7 @@ export default function SettingsOrganizationPage() {
 
         {/* 직무 카드 */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardHeader className="flex flex-col space-y-2 pb-3">
             <CardTitle className="text-sm font-semibold">직무 <span className="font-normal text-muted-foreground">({duties.length})</span></CardTitle>
             <CardActionBar
               isEditing={!!editingDutyId}

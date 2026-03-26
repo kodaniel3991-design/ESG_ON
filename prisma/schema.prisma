@@ -228,6 +228,7 @@ model Employee {
 
 model KpiMaster {
   id             String   @id @db.VarChar(36)
+  esgDomain      String?  @map("esg_domain") @db.VarChar(20)
   code           String   @unique @db.VarChar(50)
   name           String   @db.VarChar(255)
   category       String   @db.VarChar(50)

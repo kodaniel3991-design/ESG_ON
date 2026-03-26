@@ -13,7 +13,7 @@ interface CardActionBarProps {
   hasSelection: boolean;
   onEdit: () => void;
   onCancel: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onSave: () => void;
   adds?: AddButton[];
 }
@@ -23,7 +23,7 @@ export function CardActionBar({
   hasSelection,
   onEdit,
   onCancel,
-  onDelete,
+  onDelete = undefined,
   onSave,
   adds = [],
 }: CardActionBarProps) {
@@ -54,15 +54,17 @@ export function CardActionBar({
       )}
 
       {/* 삭제 */}
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={!hasSelection || isEditing}
-        className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
-        onClick={onDelete}
-      >
-        <Trash2 className="mr-1 h-3.5 w-3.5" /> 삭제
-      </Button>
+      {onDelete !== undefined && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!hasSelection || isEditing}
+          className="text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
+          onClick={onDelete}
+        >
+          <Trash2 className="mr-1 h-3.5 w-3.5" /> 삭제
+        </Button>
+      )}
 
       {/* 저장 */}
       <Button size="sm" disabled={!isEditing} onClick={onSave}>

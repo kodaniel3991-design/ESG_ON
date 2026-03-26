@@ -4,17 +4,15 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { CardActionBar } from "@/components/ui/card-action-bar";
 import type { UserItem, UserStatus, RoleItem } from "@/types";
 import {
   deleteUser,
   getRoles,
   getUsers,
   inviteUser,
-  setUserStatus,
   upsertUser,
 } from "@/services/api";
-import { Check, Plus, Trash2, X } from "lucide-react";
 import { USER_STATUS_LABEL } from "@/lib/constants/status-badges";
 import { usePagination } from "@/hooks/use-pagination";
 import { PaginationBar } from "@/components/common/pagination-bar";
@@ -28,6 +26,8 @@ function trimOptional(s: string | undefined): string | undefined {
   const t = s?.trim();
   return t === "" ? undefined : t;
 }
+
+type EditForm = { name: string; department: string; jobTitle: string; roleId: string; status: UserStatus };
 
 export default function SettingsUsersPage() {
   const queryClient = useQueryClient();
@@ -48,10 +48,6 @@ export default function SettingsUsersPage() {
     mutationFn: upsertUser,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings-users"] }),
   });
-  const statusMutation = useMutation({
-    mutationFn: setUserStatus,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings-users"] }),
-  });
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings-users"] }),
@@ -64,8 +60,12 @@ export default function SettingsUsersPage() {
     setQueryState(val);
     sessionStorage.setItem("users-search-q", val);
   };
+
   const [showAddRow, setShowAddRow] = useState(false);
   const [addForm, setAddForm] = useState(emptyForm);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,12 +95,46 @@ export default function SettingsUsersPage() {
     setShowAddRow(false);
   };
 
-  const handleRoleChange = (user: UserItem, roleId: string) => {
-    upsertMutation.mutate({ ...user, roleId: roleId || undefined });
+  const handleEditStart = () => {
+    const u = users.find((x) => x.id === selectedUserId);
+    if (!u) return;
+    setEditForm({
+      name: u.name,
+      department: u.department ?? "",
+      jobTitle: u.jobTitle ?? "",
+      roleId: u.roleId ?? "",
+      status: u.status as UserStatus,
+    });
+    setEditingUserId(u.id);
   };
 
-  const handleStatusChange = (userId: string, status: UserStatus) => {
-    statusMutation.mutate({ userId, status });
+  const handleEditCancel = () => {
+    setEditingUserId(null);
+    setEditForm(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingUserId || !editForm) return;
+    const u = users.find((x) => x.id === editingUserId);
+    if (!u) return;
+    await upsertMutation.mutateAsync({
+      ...u,
+      name: editForm.name.trim(),
+      department: trimOptional(editForm.department),
+      jobTitle: trimOptional(editForm.jobTitle),
+      roleId: trimOptional(editForm.roleId),
+      status: editForm.status,
+    });
+    setEditingUserId(null);
+    setEditForm(null);
+  };
+
+  const handleDelete = () => {
+    if (!selectedUserId) return;
+    deleteMutation.mutate(selectedUserId);
+    setSelectedUserId(null);
+    setEditingUserId(null);
+    setEditForm(null);
   };
 
   return (
@@ -112,28 +146,26 @@ export default function SettingsUsersPage() {
 
       <div className="mt-6">
         <Card>
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-base">사용자 목록</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                역할 할당, 상태 변경, 삭제를 수행할 수 있습니다.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
+          <CardHeader className="flex flex-col space-y-2 pb-3">
+            <CardTitle className="text-sm font-semibold">
+              사용자 목록 <span className="font-normal text-muted-foreground">({users.length})</span>
+            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="검색 (이름/이메일/부서/직책)"
-                className={inputClass}
+                className={inputClass + " max-w-xs"}
               />
-              <Button
-                size="sm"
-                onClick={() => { setShowAddRow(true); setAddForm(emptyForm); }}
-                disabled={showAddRow}
-              >
-                <Plus className="mr-1 h-4 w-4" />
-                사용자 추가
-              </Button>
+              <CardActionBar
+                isEditing={!!editingUserId}
+                hasSelection={!!selectedUserId}
+                onEdit={handleEditStart}
+                onCancel={handleEditCancel}
+                onDelete={handleDelete}
+                onSave={handleEditSave}
+                adds={[{ label: "추가", onClick: () => { setShowAddRow(true); setAddForm(emptyForm); } }]}
+              />
             </div>
           </CardHeader>
           <CardContent>
@@ -151,7 +183,6 @@ export default function SettingsUsersPage() {
                       <th className="w-28 pb-2 pr-2 font-medium">역할</th>
                       <th className="w-20 pb-2 pr-2 font-medium">상태</th>
                       <th className="w-28 pb-2 pr-2 font-medium">최근 로그인</th>
-                      <th className="w-16 pb-2" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -203,31 +234,19 @@ export default function SettingsUsersPage() {
                             ))}
                           </select>
                         </td>
-                        <td className="py-1.5 pr-2 text-muted-foreground">-</td>
-                        <td className="py-1.5 pr-2 text-muted-foreground">-</td>
-                        <td className="py-1.5">
-                          <div className="flex items-center gap-1">
-                            <Button
+                        <td className="py-1.5 pr-2 text-muted-foreground" colSpan={2}>
+                          <div className="flex gap-1">
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-primary"
                               onClick={handleAdd}
                               disabled={inviteMutation.isPending || !addForm.name || !addForm.email}
-                              title="저장"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
+                              className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground disabled:opacity-50"
+                            >저장</button>
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground"
                               onClick={() => setShowAddRow(false)}
-                              title="취소"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                              className="rounded border px-2 py-1 text-xs"
+                            >취소</button>
                           </div>
                         </td>
                       </tr>
@@ -235,58 +254,87 @@ export default function SettingsUsersPage() {
 
                     {filtered.length === 0 && !showAddRow ? (
                       <tr>
-                        <td colSpan={8} className="py-10 text-center text-muted-foreground">
+                        <td colSpan={7} className="py-10 text-center text-muted-foreground">
                           표시할 사용자가 없습니다.
                         </td>
                       </tr>
                     ) : (
-                      visibleUsers.map((u) => (
-                        <tr key={u.id}>
-                          <td className="py-2 pr-2 font-medium">{u.name}</td>
-                          <td className="py-2 pr-2 text-muted-foreground">{u.email}</td>
-                          <td className="py-2 pr-2">{u.department ?? "-"}</td>
-                          <td className="py-2 pr-2">{u.jobTitle ?? "-"}</td>
-                          <td className="py-2 pr-2">
-                            <select
-                              value={u.roleId ?? ""}
-                              onChange={(e) => handleRoleChange(u, e.target.value)}
-                              className={inputClass}
-                              disabled={rolesLoading || upsertMutation.isPending}
-                            >
-                              <option value="">미지정</option>
-                              {roles.map((r) => (
-                                <option key={r.id} value={r.id}>{r.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-2 pr-2">
-                            <select
-                              value={u.status}
-                              onChange={(e) => handleStatusChange(u.id, e.target.value as UserStatus)}
-                              className={inputClass}
-                              disabled={statusMutation.isPending}
-                            >
-                              <option value="active">{USER_STATUS_LABEL["active"]}</option>
-                              <option value="invited">{USER_STATUS_LABEL["invited"]}</option>
-                              <option value="disabled">{USER_STATUS_LABEL["disabled"]}</option>
-                            </select>
-                          </td>
-                          <td className="py-2 pr-2 text-muted-foreground">{u.lastLoginAt ?? "-"}</td>
-                          <td className="py-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => deleteMutation.mutate(u.id)}
-                              disabled={deleteMutation.isPending}
-                              title="삭제"
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))
+                      visibleUsers.map((u) => {
+                        const isEditing = editingUserId === u.id;
+                        const isSelected = selectedUserId === u.id;
+                        return (
+                          <tr
+                            key={u.id}
+                            className={`cursor-pointer align-middle transition-colors ${isSelected ? "bg-accent" : "hover:bg-muted/50"}`}
+                            onClick={() => { if (!isEditing) setSelectedUserId(u.id); }}
+                          >
+                            <td className="py-2 pr-2 font-medium">
+                              {isEditing ? (
+                                <input
+                                  value={editForm!.name}
+                                  onChange={(e) => setEditForm((p) => p && ({ ...p, name: e.target.value }))}
+                                  className={inputClass}
+                                  autoFocus
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : u.name}
+                            </td>
+                            <td className="py-2 pr-2 text-muted-foreground">{u.email}</td>
+                            <td className="py-2 pr-2">
+                              {isEditing ? (
+                                <input
+                                  value={editForm!.department}
+                                  onChange={(e) => setEditForm((p) => p && ({ ...p, department: e.target.value }))}
+                                  className={inputClass}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (u.department ?? "-")}
+                            </td>
+                            <td className="py-2 pr-2">
+                              {isEditing ? (
+                                <input
+                                  value={editForm!.jobTitle}
+                                  onChange={(e) => setEditForm((p) => p && ({ ...p, jobTitle: e.target.value }))}
+                                  className={inputClass}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (u.jobTitle ?? "-")}
+                            </td>
+                            <td className="py-2 pr-2">
+                              <select
+                                value={isEditing ? editForm!.roleId : (u.roleId ?? "")}
+                                onChange={(e) => {
+                                  if (isEditing) setEditForm((p) => p && ({ ...p, roleId: e.target.value }));
+                                }}
+                                className={inputClass}
+                                disabled={rolesLoading || (!isEditing)}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="">미지정</option>
+                                {roles.map((r) => (
+                                  <option key={r.id} value={r.id}>{r.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-2 pr-2">
+                              <select
+                                value={isEditing ? editForm!.status : u.status}
+                                onChange={(e) => {
+                                  if (isEditing) setEditForm((p) => p && ({ ...p, status: e.target.value as UserStatus }));
+                                }}
+                                className={inputClass}
+                                disabled={!isEditing}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="active">{USER_STATUS_LABEL["active"]}</option>
+                                <option value="invited">{USER_STATUS_LABEL["invited"]}</option>
+                                <option value="disabled">{USER_STATUS_LABEL["disabled"]}</option>
+                              </select>
+                            </td>
+                            <td className="py-2 pr-2 text-muted-foreground">{u.lastLoginAt ?? "-"}</td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
