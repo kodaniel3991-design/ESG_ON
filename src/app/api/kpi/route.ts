@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { randomUUID } from "crypto";
 
 // GET /api/kpi?type=master|targets|performance|change-log
 export async function GET(req: NextRequest) {
@@ -249,6 +250,50 @@ export async function POST(req: NextRequest) {
         });
       }
       return NextResponse.json({ ok: true });
+    }
+
+    // 온보딩 위저드 — 선택된 KPI를 kpi_masters에 upsert (code 기준)
+    if (action === "setup-kpis") {
+      const { items } = body as {
+        items: {
+          code: string;
+          name: string;
+          esgDomain: string;
+          category: string;
+          unit: string;
+          description: string;
+        }[];
+      };
+      for (const item of items) {
+        const existing = await prisma.kpiMaster.findUnique({ where: { code: item.code } });
+        if (existing) {
+          await prisma.kpiMaster.update({
+            where: { code: item.code },
+            data: {
+              name: item.name,
+              esgDomain: item.esgDomain,
+              category: item.category,
+              unit: item.unit,
+              description: item.description,
+              reportIncluded: true,
+            },
+          });
+        } else {
+          await prisma.kpiMaster.create({
+            data: {
+              id: randomUUID(),
+              code: item.code,
+              name: item.name,
+              esgDomain: item.esgDomain,
+              category: item.category,
+              unit: item.unit,
+              description: item.description,
+              reportIncluded: true,
+            },
+          });
+        }
+      }
+      return NextResponse.json({ ok: true, count: items.length });
     }
 
     if (action === "delete-master") {

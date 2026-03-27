@@ -57,8 +57,8 @@ export const NAV_ITEMS: NavItem[] = [
           link("/getting-started/organization", "① 조직 설정"),
           link("/getting-started/facility", "② 사업장 설정"),
           link("/getting-started/scope", "③ Scope 설정"),
-          link("/getting-started/kpi", "④ KPI 선택"),
-          link("/getting-started/framework", "⑤ 공시 기준 선택"),
+          link("/getting-started/framework", "④ 공시 기준 선택"),
+          link("/getting-started/kpi", "⑤ KPI 선택"),
         ],
       },
     ],
@@ -68,20 +68,20 @@ export const NAV_ITEMS: NavItem[] = [
     label: "데이터 관리",
     children: [
       {
-        label: "ESG 데이터",
-        children: [
-          link("/data/esg/environment", "(E)환경 데이터"),
-          link("/data/esg/social", "(S)사회 데이터"),
-          link("/data/esg/governance", "(G)거버넌스 데이터"),
-        ],
-      },
-      {
         label: "배출량 관리",
         children: [
           link("/data/emissions/scope1", "Scope 1"),
           link("/data/emissions/scope2", "Scope 2"),
           link("/data/emissions/scope3", "Scope 3"),
           link("/data/emissions/factors", "배출계수 마스터"),
+        ],
+      },
+      {
+        label: "ESG 데이터",
+        children: [
+          link("/data/esg/environment", "(E)환경 데이터"),
+          link("/data/esg/social", "(S)사회 데이터"),
+          link("/data/esg/governance", "(G)거버넌스 데이터"),
         ],
       },
       {

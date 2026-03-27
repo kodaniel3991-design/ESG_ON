@@ -1,20 +1,43 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useWizardStore, WIZARD_STEPS } from "./wizard-store";
-import { CheckCircle2, Circle, ArrowRight, Sparkles, FlaskConical } from "lucide-react";
+import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STEP_DESCRIPTIONS: Record<number, string> = {
   1: "회사명, 산업군, 국가, 직원 수를 입력합니다. 산업군 선택 시 AI가 최적 KPI를 자동 추천합니다.",
   2: "사업장명, 위치, 유형을 등록합니다. Scope 1/2 배출량이 자동 연결됩니다.",
   3: "Scope 1/2/3 사용 여부와 Scope 3 카테고리를 선택합니다.",
-  4: "환경·사회·거버넌스 KPI를 선택합니다. 산업별 AI 추천 KPI가 자동으로 표시됩니다.",
-  5: "GRI, ISSB, CDP 등 공시 기준을 선택하면 KPI가 자동 매핑됩니다.",
+  4: "GRI, ISSB, CDP 등 공시 기준을 선택하면 KPI가 자동 매핑됩니다.",
+  5: "환경·사회·거버넌스 KPI를 선택합니다. 공시 기준 기반 추천 KPI가 자동으로 표시됩니다.",
 };
 
 export default function GettingStartedPage() {
-  const { state, completionPct, reset, loadDummy } = useWizardStore();
+  const { state, hydrated, markStepComplete } = useWizardStore();
+
+  // DB 데이터 기준으로 완료 상태 동기화
+  useEffect(() => {
+    if (!hydrated) return;
+    fetch("/api/organization")
+      .then((r) => r.json())
+      .then((org) => {
+        if (!org || !org.organizationName) return;
+        if (org.organizationName && org.organizationName !== "조직") markStepComplete(1);
+        if (org.worksites?.length > 0 || state.facilities?.some((f: any) => f.name?.trim())) markStepComplete(2);
+        if (org.scope3Categories !== undefined && org.scope3Categories !== null) markStepComplete(3);
+        if (org.selectedFrameworks?.length > 0) markStepComplete(4);
+      })
+      .catch(() => {});
+    fetch("/api/kpi?type=master")
+      .then((r) => r.json())
+      .then((kpis) => {
+        if (Array.isArray(kpis) && kpis.length > 0) markStepComplete(5);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   const allDone = state.completedSteps.length === 5;
 
@@ -101,24 +124,6 @@ export default function GettingStartedPage() {
         })}
       </div>
 
-      {/* 하단 버튼 */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={loadDummy}
-          className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-        >
-          <FlaskConical className="h-3.5 w-3.5" />
-          샘플 데이터 적용
-        </button>
-        {state.completedSteps.length > 0 && (
-          <button
-            onClick={reset}
-            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-          >
-            설정 초기화
-          </button>
-        )}
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWizardStore, type Industry } from "../wizard-store";
 import { getAiRecommendation } from "@/lib/ai-recommendations";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const INDUSTRIES: Industry[] = ["자동차", "제조", "건설", "IT/소프트웨어", "금융", "유통", "에너지", "화학", "식품", "기타"];
 const COUNTRIES = ["대한민국", "미국", "일본", "중국", "독일", "기타"];
 const EMPLOYEE_RANGES = ["50명 미만", "50~300명", "300~1,000명", "1,000~5,000명", "5,000명 이상"];
-const REVENUE_RANGES = ["50억 미만", "50~300억", "300억~1조", "1조 이상", "비공개"];
+const REVENUE_RANGES = ["50억 미만", "50~300억", "300~1000억", "1000억~1조", "1조 이상", "비공개"];
 
 export default function OrganizationPage() {
   const router = useRouter();
@@ -33,7 +33,18 @@ export default function OrganizationPage() {
     }, 800);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    await fetch("/api/organization", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: org.companyName,
+        industry: org.industry,
+        country: org.country,
+        employeeCount: org.employeeCount,
+        revenue: org.revenue || null,
+      }),
+    });
     markStepComplete(1);
     router.push("/getting-started/facility");
   };

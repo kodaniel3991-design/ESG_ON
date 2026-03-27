@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useWizardStore } from "../wizard-store";
 import { FRAMEWORKS, getAiRecommendation } from "@/lib/ai-recommendations";
-import { Sparkles, CheckCircle2, ArrowLeft, PartyPopper } from "lucide-react";
+import { Sparkles, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function FrameworkPage() {
@@ -29,15 +29,23 @@ export default function FrameworkPage() {
   if (framework.selected.includes("K-ESG")) mappedKpis.push(...(kpi.governance.slice(0, 2)));
   const uniqueMapped = mappedKpis.filter((k, i, arr) => k && arr.indexOf(k) === i);
 
-  const handleComplete = () => {
-    markStepComplete(5);
-    router.push("/getting-started");
+  const handleComplete = async () => {
+    await fetch("/api/organization", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: state.organization.companyName || "조직",
+        selectedFrameworks: framework.selected,
+      }),
+    });
+    markStepComplete(4);
+    router.push("/getting-started/kpi");
   };
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="mb-6">
-        <h2 className="text-base font-bold text-foreground">⑤ 공시 기준 선택</h2>
+        <h2 className="text-base font-bold text-foreground">④ 공시 기준 선택</h2>
         <p className="text-sm text-muted-foreground">
           공시 프레임워크를 선택하면 KPI가 자동 매핑됩니다.
           {aiRec && (
@@ -121,7 +129,7 @@ export default function FrameworkPage() {
 
       <div className="mt-6 flex justify-between">
         <button
-          onClick={() => router.push("/getting-started/kpi")}
+          onClick={() => router.push("/getting-started/scope")}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> 이전
@@ -129,10 +137,9 @@ export default function FrameworkPage() {
         <button
           onClick={handleComplete}
           disabled={framework.selected.length === 0}
-          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40 hover:opacity-90"
+          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40 hover:opacity-90"
         >
-          <PartyPopper className="h-4 w-4" />
-          설정 완료!
+          다음: KPI 선택 <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </div>

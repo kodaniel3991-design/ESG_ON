@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useWizardStore } from "../wizard-store";
-import { ALL_SCOPE3_CATEGORIES, getAiRecommendation } from "@/lib/ai-recommendations";
+import { SCOPE3_GROUPS, getAiRecommendation } from "@/lib/ai-recommendations";
 import { ArrowLeft, ArrowRight, Sparkles, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ const SCOPE_INFO = {
 
 export default function ScopePage() {
   const router = useRouter();
-  const { state, updateScope, markStepComplete } = useWizardStore();
+const { state, updateScope, markStepComplete } = useWizardStore();
   const { scope, organization } = state;
 
   const aiRec = organization.industry ? getAiRecommendation(organization.industry) : null;
@@ -29,9 +29,20 @@ export default function ScopePage() {
     });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    await fetch("/api/organization", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: state.organization.companyName || "조직",
+        scope1Enabled: scope.scope1,
+        scope2Enabled: scope.scope2,
+        scope3Enabled: scope.scope3,
+        scope3Categories: scope.scope3Categories,
+      }),
+    });
     markStepComplete(3);
-    router.push("/getting-started/kpi");
+    router.push("/getting-started/framework");
   };
 
   return (
@@ -52,13 +63,13 @@ export default function ScopePage() {
             <button
               onClick={() => updateScope({ scope1: !scope.scope1 })}
               className={cn(
-                "relative h-6 w-11 rounded-full transition-colors",
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
                 scope.scope1 ? "bg-emerald-500" : "bg-muted"
               )}
             >
               <span className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                scope.scope1 ? "translate-x-5" : "translate-x-0.5"
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200",
+                scope.scope1 ? "left-[22px]" : "left-0.5"
               )} />
             </button>
           </div>
@@ -74,62 +85,104 @@ export default function ScopePage() {
             <button
               onClick={() => updateScope({ scope2: !scope.scope2 })}
               className={cn(
-                "relative h-6 w-11 rounded-full transition-colors",
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
                 scope.scope2 ? "bg-blue-500" : "bg-muted"
               )}
             >
               <span className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                scope.scope2 ? "translate-x-5" : "translate-x-0.5"
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200",
+                scope.scope2 ? "left-[22px]" : "left-0.5"
               )} />
             </button>
           </div>
         </div>
 
         {/* Scope 3 카테고리 */}
-        <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-800 dark:bg-orange-950/20">
-          <div className="mb-3">
-            <p className="font-semibold text-foreground">{SCOPE_INFO[3].label}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{SCOPE_INFO[3].desc}</p>
-          </div>
-
-          {aiRec && (
-            <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400">
-              <Sparkles className="h-3.5 w-3.5" />
-              {organization.industry} 산업 AI 추천 카테고리가 강조 표시됩니다
+        <div className={cn("rounded-xl border p-4", scope.scope3 ? "border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20" : "border-border")}>
+          <div className="mb-3 flex items-start justify-between">
+            <div>
+              <p className="font-semibold text-foreground">{SCOPE_INFO[3].label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{SCOPE_INFO[3].desc}</p>
             </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {ALL_SCOPE3_CATEGORIES.map((cat) => {
-              const selected = scope.scope3Categories.includes(cat);
-              const recommended = recommendedCategories.includes(cat);
-              return (
-                <button
-                  key={cat}
-                  onClick={() => toggleCategory(cat)}
-                  className={cn(
-                    "relative rounded-lg border px-3 py-1.5 text-xs transition-all",
-                    selected
-                      ? "border-orange-400 bg-orange-100 font-semibold text-orange-800 dark:border-orange-700 dark:bg-orange-900 dark:text-orange-300"
-                      : recommended
-                      ? "border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-400"
-                      : "border-border text-muted-foreground hover:border-orange-300 hover:text-foreground"
-                  )}
-                >
-                  {recommended && !selected && (
-                    <Sparkles className="mr-1 inline h-3 w-3 text-violet-500" />
-                  )}
-                  {cat}
-                </button>
-              );
-            })}
+            <button
+              onClick={() => updateScope({ scope3: !scope.scope3 })}
+              className={cn(
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                scope.scope3 ? "bg-orange-500" : "bg-muted"
+              )}
+            >
+              <span className={cn(
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200",
+                scope.scope3 ? "left-[22px]" : "left-0.5"
+              )} />
+            </button>
           </div>
 
-          {scope.scope3Categories.length > 0 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              선택된 카테고리: {scope.scope3Categories.length}개
-            </p>
+          {scope.scope3 && (
+            <>
+              {aiRec && (
+                <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {organization.industry} 산업 AI 추천 카테고리가 강조 표시됩니다
+                </div>
+              )}
+
+              {/* Upstream / Downstream 섹션 */}
+              <div className="flex flex-col gap-3">
+                {SCOPE3_GROUPS.map((group) => {
+                  const selectedCount = group.categories.filter((c) => scope.scope3Categories.includes(c)).length;
+                  return (
+                    <div key={group.key} className="rounded-lg border border-border overflow-hidden">
+                      {/* 섹션 헤더 */}
+                      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{group.desc}</span>
+                        </div>
+                        {selectedCount > 0 && (
+                          <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {selectedCount}개 선택
+                          </span>
+                        )}
+                      </div>
+                      {/* 카테고리 버튼 */}
+                      <div className="flex flex-wrap gap-2 p-3">
+                        {group.categories.map((cat) => {
+                          const selected = scope.scope3Categories.includes(cat);
+                          const recommended = recommendedCategories.includes(cat);
+                          return (
+                            <button
+                              key={cat}
+                              onClick={() => toggleCategory(cat)}
+                              className={cn(
+                                "rounded-lg border px-3 py-1.5 text-xs transition-all",
+                                selected
+                                  ? "border-orange-400 bg-orange-100 font-semibold text-orange-800 dark:border-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                                  : recommended
+                                  ? "border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-400"
+                                  : "border-border text-muted-foreground hover:border-orange-300 hover:text-foreground"
+                              )}
+                            >
+                              {recommended && !selected && (
+                                <Sparkles className="mr-1 inline h-3 w-3 text-violet-500" />
+                              )}
+                              {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {scope.scope3Categories.length > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  선택된 카테고리: {scope.scope3Categories.length}개
+                  {" "}(상류 {SCOPE3_GROUPS[0].categories.filter((c) => scope.scope3Categories.includes(c)).length}개 · 하류 {SCOPE3_GROUPS[1].categories.filter((c) => scope.scope3Categories.includes(c)).length}개)
+                </p>
+              )}
+            </>
           )}
         </div>
 
@@ -151,7 +204,7 @@ export default function ScopePage() {
           onClick={handleNext}
           className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
         >
-          다음: KPI 선택 <ArrowRight className="h-4 w-4" />
+          다음: 공시 기준 선택 <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </div>

@@ -102,7 +102,7 @@ export default function Scope2Page() {
     <div className="space-y-4">
       <Scope2Header year={year} />
 
-      <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
+      <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
         <Scope2CategorySidebar
           categories={SCOPE2_CATEGORIES}
           selectedId={selectedCategoryId}

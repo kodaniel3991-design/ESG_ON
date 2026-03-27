@@ -15,7 +15,7 @@ import { MonthlyActivityTable } from "@/components/scope1/monthly-activity-table
 import { ValidationInsightsCard } from "@/components/scope1/validation-insights-card";
 import { EmissionTrendCard } from "@/components/scope1/emission-trend-card";
 import { AuditLogTable } from "@/components/scope1/audit-log-table";
-import { ActionFooter } from "@/components/scope1/action-footer";
+import { ActionFooter, type DataStatus } from "@/components/scope1/action-footer";
 import {
   SCOPE1_AUDIT_LOGS,
   SCOPE1_CATEGORIES,
@@ -25,6 +25,7 @@ import { calculateMonthlyEmissions } from "@/lib/scope1-utils";
 import { Badge } from "@/components/ui/badge";
 import { useFacilities, useSaveFacilities, type DbFacilityRow } from "@/hooks/use-facilities";
 import { useActivity, useSaveActivity } from "@/hooks/use-activity";
+import type { HistoricalMonthly } from "@/components/scope1/validation-insights-card";
 
 type InputMode = "manual" | "excel" | "api";
 
@@ -71,6 +72,7 @@ export default function Scope1Page() {
   const [inputMode, setInputMode] = useState<InputMode>("manual");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<ScopeCategoryId>("fixed");
+  const [dataStatus, setDataStatus] = useState<DataStatus>("draft");
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>(
     INITIAL_FACILITY_ROWS_BY_CATEGORY["fixed"]?.[0]?.id ?? "",
   );
@@ -96,7 +98,16 @@ export default function Scope1Page() {
     setLocalActivity({});
   }, [selectedCategoryId]);
 
-  const effectiveFacilities = localFacilities.length > 0 ? localFacilities : facilities;
+  // 연도 전환 시 로컬 활동량 캐시 초기화 (DB 데이터로 대체)
+  useEffect(() => {
+    setLocalActivity({});
+  }, [year]);
+
+  // effectiveFacilities를 메모이제이션 — 매 렌더마다 새 참조 생성 방지
+  const effectiveFacilities = useMemo(
+    () => (localFacilities.length > 0 ? localFacilities : facilities),
+    [localFacilities, facilities],
+  );
 
   // DB 시설 목록이 바뀌었을 때, 현재 선택된 ID가 목록에 없으면 첫 번째로 자동 선택
   useEffect(() => {
@@ -108,6 +119,17 @@ export default function Scope1Page() {
 
   // DB에서 월별 활동량 로드
   const { data: dbActivity } = useActivity(selectedFacilityId, year);
+
+  // 시설 전환 시 해당 시설의 활동량 쿼리 강제 갱신 (캐시 무효화)
+  useEffect(() => {
+    if (selectedFacilityId) {
+      queryClient.invalidateQueries({ queryKey: ["activity", selectedFacilityId, year] });
+    }
+  }, [selectedFacilityId, year, queryClient]);
+  const prevYear1 = String(parseInt(year) - 1);
+  const prevYear2 = String(parseInt(year) - 2);
+  const { data: prevYear1Activity } = useActivity(selectedFacilityId, prevYear1);
+  const { data: prevYear2Activity } = useActivity(selectedFacilityId, prevYear2);
   const saveActivityMutation = useSaveActivity();
 
   const currentActivity = useMemo(() => {
@@ -275,11 +297,57 @@ export default function Scope1Page() {
     [currentActivity, selectedFacility],
   );
 
+  const totalEmission = useMemo(() => monthlyTotals.reduce((s, v) => s + v, 0), [monthlyTotals]);
+  const hasErrors = currentActivity.some((v) => v < 0);
+
+  const historicalMonthly = useMemo<HistoricalMonthly[]>(() => {
+    const entries: HistoricalMonthly[] = [
+      { year: prevYear1, values: prevYear1Activity ?? Array(12).fill(0) },
+      { year: prevYear2, values: prevYear2Activity ?? Array(12).fill(0) },
+    ];
+    // 해당 연도에 실제 데이터가 하나라도 있는 경우만 포함
+    return entries.filter((h) => h.values.some((v) => v > 0));
+  }, [prevYear1, prevYear2, prevYear1Activity, prevYear2Activity]);
+
+  // 검증 요청: DataValidation 레코드 생성 후 상태 전환
+  const handleRequestValidation = async () => {
+    await fetch("/api/validations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save-validation",
+        item: {
+          id: crypto.randomUUID(),
+          scope: "Scope 1",
+          category: CATEGORY_LABELS[selectedCategoryId] ?? selectedCategoryId,
+          emissionSource: selectedFacility?.facilityName ?? "미선택",
+          site: selectedFacility?.facilityName ?? "미선택",
+          period: year,
+          activityAmount: String(currentActivity.reduce((s, v) => s + v, 0).toFixed(3)),
+          emissions: String(totalEmission.toFixed(4)),
+          status: "submitted",
+        },
+      }),
+    });
+    setDataStatus("reviewing");
+  };
+
+  // 저장: 활동량 DB 저장
+  const handleSaveFromFooter = async () => {
+    if (!selectedFacilityId) return;
+    await new Promise<void>((resolve, reject) => {
+      saveActivityMutation.mutate(
+        { facilityId: selectedFacilityId, year, values: currentActivity },
+        { onSuccess: () => resolve(), onError: () => reject() },
+      );
+    });
+  };
+
   return (
     <div className="space-y-4">
       <ScopeHeader year={year} />
 
-      <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
+      <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
         <CategorySidebar
           categories={SCOPE1_CATEGORIES}
           selectedId={selectedCategoryId}
@@ -301,6 +369,7 @@ export default function Scope1Page() {
           </div>
 
           <MonthlyActivityTable
+            key={`${selectedFacilityId}-${year}`}
             activityByMonth={currentActivity}
             onChangeActivity={handleActivityChange}
             fuel={toFuelType(selectedFacility?.fuelName ?? "LNG")}
@@ -321,12 +390,6 @@ export default function Scope1Page() {
                       <option key={y} value={y}>{y}</option>
                     ))}
                   </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">데이터 상태</span>
-                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
-                    Draft
-                  </Badge>
                 </div>
               </div>
             }
@@ -383,10 +446,16 @@ export default function Scope1Page() {
             }
           />
 
-          <ActionFooter year={year} />
+          <ActionFooter
+            year={year}
+            status={dataStatus}
+            hasErrors={hasErrors}
+            onRequestValidation={handleRequestValidation}
+            onSave={handleSaveFromFooter}
+          />
 
           <div className="grid gap-4 lg:grid-cols-2 items-stretch">
-            <ValidationInsightsCard />
+            <ValidationInsightsCard activityByMonth={currentActivity} year={year} historicalMonthly={historicalMonthly} />
             <div className="h-full">
               <AuditLogTable items={SCOPE1_AUDIT_LOGS} />
             </div>

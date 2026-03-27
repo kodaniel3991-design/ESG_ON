@@ -1096,7 +1096,7 @@ export default function Scope3Page() {
         </PageHeader>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
+      <div className="grid gap-6 lg:grid-cols-[200px,1fr]">
         {/* 좌측 Scope 3 카테고리 트리 (Scope 2와 유사한 위치/형태) */}
         <Scope3CategorySidebar
           categories={SCOPE3_CATEGORIES}

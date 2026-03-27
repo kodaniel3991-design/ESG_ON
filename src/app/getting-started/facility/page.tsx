@@ -1,29 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWizardStore, type FacilityData } from "../wizard-store";
-import { ArrowLeft, ArrowRight, Plus, Trash2, Zap, Info, Building2, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Trash2, Zap, Info, Building2, Check, Factory, Warehouse, ShoppingBag, FlaskConical, Wrench, Flame, Fuel, Thermometer, Leaf, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const FACILITY_TYPES = ["공장", "사무실", "물류센터", "매장", "연구소", "기타"];
 
 // 에너지 탭 그룹
-const ENERGY_TABS = [
-  { label: "전기", icon: "⚡", items: ["전기"], scope: "S2" as const },
-  { label: "가스", icon: "🔥", items: ["도시가스", "LPG"], scope: "S1" as const },
-  { label: "연료", icon: "🛢️", items: ["경유", "휘발유", "중유"], scope: "S1" as const },
-  { label: "열", icon: "🌡️", items: ["스팀", "지역난방"], scope: "S2" as const },
-  { label: "재생에너지", icon: "🌿", items: ["태양광", "풍력", "수소"], scope: null },
+const ENERGY_TABS: { label: string; icon: LucideIcon; items: string[]; scope: "S1" | "S2" | null }[] = [
+  { label: "전기", icon: Zap, items: ["전기"], scope: "S2" },
+  { label: "가스", icon: Flame, items: ["도시가스", "LPG"], scope: "S1" },
+  { label: "연료", icon: Fuel, items: ["경유", "휘발유", "중유"], scope: "S1" },
+  { label: "열", icon: Thermometer, items: ["스팀", "지역난방"], scope: "S2" },
+  { label: "재생에너지", icon: Leaf, items: ["태양광", "풍력", "수소"], scope: null },
 ];
 
-const TYPE_ICONS: Record<string, string> = {
-  공장: "🏭",
-  사무실: "🏢",
-  물류센터: "📦",
-  매장: "🛍️",
-  연구소: "🔬",
-  기타: "🏗️",
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  공장: Factory,
+  사무실: Building2,
+  물류센터: Warehouse,
+  매장: ShoppingBag,
+  연구소: FlaskConical,
+  기타: Wrench,
 };
 
 // 유형별 고급 옵션
@@ -110,11 +110,14 @@ function FacilityCard({
           <span className="text-sm font-semibold text-foreground">
             {facility.name || `사업장 ${index + 1}`}
           </span>
-          {(facility.types ?? []).map((t) => (
-            <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              {TYPE_ICONS[t]} {t}
-            </span>
-          ))}
+          {(facility.types ?? []).map((t) => {
+            const Icon = TYPE_ICONS[t];
+            return (
+              <span key={t} className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {Icon && <Icon className="h-3 w-3" />} {t}
+              </span>
+            );
+          })}
         </div>
         {canRemove && (
           <button
@@ -176,7 +179,8 @@ function FacilityCard({
                     )}
                   >
                     {selected && <Check className="h-3 w-3 shrink-0" />}
-                    {TYPE_ICONS[type]} {type}
+                    {(() => { const Icon = TYPE_ICONS[type]; return Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null; })()}
+                    {type}
                   </button>
                 );
               })}
@@ -202,7 +206,8 @@ function FacilityCard({
                               : "border-transparent text-muted-foreground hover:text-foreground"
                           )}
                         >
-                          {TYPE_ICONS[type]} {type}
+                          {(() => { const Icon = TYPE_ICONS[type]; return Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null; })()}
+                          {type}
                           {hasSelection && (
                             <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary">
                               {(facility.typeOptions?.[type] ?? []).length}
@@ -269,7 +274,7 @@ function FacilityCard({
                         : "border-transparent text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {tab.icon} {tab.label}
+                    <tab.icon className="h-3.5 w-3.5 shrink-0" /> {tab.label}
                     {selectedCount > 0 && (
                       <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary">
                         {selectedCount}
@@ -323,10 +328,50 @@ function FacilityCard({
 
 export default function FacilityPage() {
   const router = useRouter();
-  const { state, addFacility, updateFacilityById, removeFacility, markStepComplete } = useWizardStore();
+  const { state, hydrated, addFacility, updateFacilityById, removeFacility, markStepComplete, save } = useWizardStore();
   const facilities = state.facilities ?? [];
 
-  const handleNext = () => {
+  // localStorage 시설 데이터가 비어있으면 DB에서 복원
+  useEffect(() => {
+    if (!hydrated) return;
+    const hasData = facilities.some((f) => f.name.trim());
+    if (hasData) return;
+    fetch("/api/organization")
+      .then((r) => r.json())
+      .then((org) => {
+        if (!org.worksites?.length) return;
+        const restored = org.worksites.map((w: any) => ({
+          id: w.id,
+          name: w.name,
+          location: w.address ?? "",
+          types: w.facilityTypes ?? [],
+          energySources: w.energySources ?? [],
+          typeOptions: w.typeOptions ?? {},
+        }));
+        save({ ...state, facilities: restored });
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  const handleNext = async () => {
+    await fetch("/api/organization", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        organizationName: state.organization.companyName || "조직",
+        worksites: facilities.map((f, i) => ({
+          id: f.id,
+          name: f.name,
+          address: f.location,
+          facilityTypes: f.types,
+          energySources: f.energySources,
+          typeOptions: f.typeOptions ?? {},
+          ...(i === 0 && { isDefault: true }),
+        })),
+        defaultWorksiteId: facilities[0]?.id,
+      }),
+    });
     markStepComplete(2);
     router.push("/getting-started/scope");
   };

@@ -25,6 +25,9 @@ export async function GET() {
       name: w.name,
       address: w.address,
       addressDetail: w.addressDetail ?? undefined,
+      facilityTypes: w.facilityTypes ? JSON.parse(w.facilityTypes) : [],
+      energySources: w.energySources ? JSON.parse(w.energySources) : [],
+      typeOptions: w.typeOptions ? JSON.parse(w.typeOptions) : {},
     }));
 
     const defaultRow = worksiteRows.find((w) => w.isDefault === true);
@@ -36,6 +39,12 @@ export async function GET() {
       organizationAddressDetail: org.addressDetail ?? undefined,
       worksites,
       defaultWorksiteId,
+      industry: org.industry ?? "",
+      country: org.country ?? "",
+      employeeCount: org.employeeCount ?? "",
+      revenue: org.revenue ?? "",
+      scope3Categories: org.scope3Categories ? JSON.parse(org.scope3Categories) : null,
+      selectedFrameworks: org.selectedFrameworks ? JSON.parse(org.selectedFrameworks) : [],
     });
   } catch (err: any) {
     console.error("[GET /api/organization]", err);
@@ -53,12 +62,30 @@ export async function POST(req: NextRequest) {
       organizationAddressDetail,
       worksites,
       defaultWorksiteId,
+      industry,
+      country,
+      employeeCount,
+      revenue,
+      scope1Enabled,
+      scope2Enabled,
+      scope3Enabled,
+      scope3Categories,
+      selectedFrameworks,
     } = body as {
       organizationName: string;
       organizationAddress?: string;
       organizationAddressDetail?: string;
-      worksites: { id: string; name: string; address: string; addressDetail?: string }[];
+      worksites: { id: string; name: string; address: string; addressDetail?: string; facilityTypes?: string[]; energySources?: string[]; typeOptions?: Record<string, string[]> }[];
       defaultWorksiteId?: string;
+      industry?: string;
+      country?: string;
+      employeeCount?: string;
+      revenue?: string;
+      scope1Enabled?: boolean;
+      scope2Enabled?: boolean;
+      scope3Enabled?: boolean;
+      scope3Categories?: string[];
+      selectedFrameworks?: string[];
     };
 
     // 조직 정보 upsert (단일 행)
@@ -68,8 +95,17 @@ export async function POST(req: NextRequest) {
         where: { id: org.id },
         data: {
           organizationName: organizationName || "조직",
-          address: organizationAddress || "",
-          addressDetail: organizationAddressDetail ?? null,
+          ...(organizationAddress !== undefined && { address: organizationAddress }),
+          ...(organizationAddressDetail !== undefined && { addressDetail: organizationAddressDetail }),
+          ...(industry !== undefined && { industry }),
+          ...(country !== undefined && { country }),
+          ...(employeeCount !== undefined && { employeeCount }),
+          ...(revenue !== undefined && { revenue }),
+          ...(scope1Enabled !== undefined && { scope1Enabled }),
+          ...(scope2Enabled !== undefined && { scope2Enabled }),
+          ...(scope3Enabled !== undefined && { scope3Enabled }),
+          ...(scope3Categories !== undefined && { scope3Categories: JSON.stringify(scope3Categories) }),
+          ...(selectedFrameworks !== undefined && { selectedFrameworks: JSON.stringify(selectedFrameworks) }),
         },
       });
     } else {
@@ -78,12 +114,23 @@ export async function POST(req: NextRequest) {
           organizationName: organizationName || "조직",
           address: organizationAddress || "",
           addressDetail: organizationAddressDetail ?? null,
+          industry: industry ?? null,
+          country: country ?? null,
+          employeeCount: employeeCount ?? null,
+          revenue: revenue ?? null,
+          scope1Enabled: scope1Enabled ?? true,
+          scope2Enabled: scope2Enabled ?? true,
+          scope3Enabled: scope3Enabled ?? true,
+          scope3Categories: scope3Categories ? JSON.stringify(scope3Categories) : null,
+          selectedFrameworks: selectedFrameworks ? JSON.stringify(selectedFrameworks) : null,
         },
       });
     }
 
     const orgId = org.id;
 
+    // worksites가 명시적으로 전달된 경우에만 사업장 처리 (빈 배열 포함 undefined면 스킵)
+    if (worksites !== undefined) {
     // 기존 사업장 ID 목록
     const existingWorksites = await prisma.worksite.findMany({
       where: { organizationId: orgId },
@@ -109,6 +156,9 @@ export async function POST(req: NextRequest) {
           name: w.name || "사업장",
           address: w.address || "",
           addressDetail: w.addressDetail ?? null,
+          facilityTypes: w.facilityTypes ? JSON.stringify(w.facilityTypes) : null,
+          energySources: w.energySources ? JSON.stringify(w.energySources) : null,
+          typeOptions: w.typeOptions ? JSON.stringify(w.typeOptions) : null,
           isDefault,
           sortOrder: i,
         },
@@ -118,11 +168,15 @@ export async function POST(req: NextRequest) {
           name: w.name || "사업장",
           address: w.address || "",
           addressDetail: w.addressDetail ?? null,
+          facilityTypes: w.facilityTypes ? JSON.stringify(w.facilityTypes) : null,
+          energySources: w.energySources ? JSON.stringify(w.energySources) : null,
+          typeOptions: w.typeOptions ? JSON.stringify(w.typeOptions) : null,
           isDefault,
           sortOrder: i,
         },
       });
     }
+    } // end if (worksites !== undefined)
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

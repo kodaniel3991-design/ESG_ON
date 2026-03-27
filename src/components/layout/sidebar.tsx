@@ -54,17 +54,6 @@ function isSectionActive(pathname: string, item: NavItem): boolean {
   );
 }
 
-/** 섹션의 첫 번째 링크 href */
-function getFirstHref(item: NavItem): string {
-  if (item.type === "link") return item.href;
-  const firstSection = item.children[0];
-  if (!firstSection) return "#";
-  const firstChild = firstSection.children[0];
-  if (!firstChild) return "#";
-  if ("href" in firstChild) return firstChild.href;
-  return (firstChild as NavGroupWithChildren).children[0]?.href ?? "#";
-}
-
 /** 3depth 링크 렌더 */
 function NavLink({ item, collapsed }: { item: NavLinkItem; collapsed: boolean }) {
   const pathname = usePathname() ?? "";
@@ -74,7 +63,7 @@ function NavLink({ item, collapsed }: { item: NavLinkItem; collapsed: boolean })
     <Link
       href={item.href}
       className={cn(
-        "block rounded-md px-3 py-1.5 text-xs transition-colors",
+        "block rounded-md px-3 py-1.5 text-[13px] transition-colors",
         active
           ? "bg-primary/10 font-medium text-primary"
           : "text-muted-foreground hover:bg-muted hover:text-foreground"

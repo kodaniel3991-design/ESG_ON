@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useWizardStore, WIZARD_STEPS } from "./wizard-store";
-import { CheckCircle2, Circle } from "lucide-react";
 
 export default function GettingStartedLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -40,7 +39,7 @@ export default function GettingStartedLayout({ children }: { children: React.Rea
                 <Link
                   href={s.href}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors",
                     active
                       ? "bg-primary text-primary-foreground"
                       : done
@@ -48,12 +47,7 @@ export default function GettingStartedLayout({ children }: { children: React.Rea
                       : "bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {done ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                  ) : (
-                    <Circle className="h-3.5 w-3.5 shrink-0" />
-                  )}
-                  <span className="hidden sm:inline">① </span>
+                  <span className="font-bold">{s.step}.</span>
                   {s.title}
                 </Link>
                 {i < WIZARD_STEPS.length - 1 && (

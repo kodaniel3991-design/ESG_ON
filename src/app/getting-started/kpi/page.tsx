@@ -1,73 +1,200 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWizardStore } from "../wizard-store";
-import { ALL_KPI, getAiRecommendation } from "@/lib/ai-recommendations";
-import { Sparkles, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  ALL_KPI,
+  getAiRecommendation,
+  getKpiRecommendationsByFrameworks,
+  getMatchingFrameworks,
+  type KpiItem,
+} from "@/lib/ai-recommendations";
+import { Sparkles, ArrowLeft, ArrowRight, Leaf, Users, Scale, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type KpiCategory = "environmental" | "social" | "governance";
 
-const CATEGORY_LABELS: Record<KpiCategory, { label: string; emoji: string; color: string }> = {
-  environmental: { label: "환경 (Environmental)", emoji: "🌿", color: "emerald" },
-  social: { label: "사회 (Social)", emoji: "🤝", color: "blue" },
-  governance: { label: "거버넌스 (Governance)", emoji: "⚖️", color: "violet" },
-};
+const CATEGORIES: {
+  key: KpiCategory;
+  label: string;
+  sublabel: string;
+  icon: React.ElementType;
+  activeClass: string;
+  badgeClass: string;
+  rowSelectedClass: string;
+  checkClass: string;
+  groupCellClass: string;
+}[] = [
+  {
+    key: "environmental",
+    label: "환경",
+    sublabel: "Environmental",
+    icon: Leaf,
+    activeClass: "border-emerald-500 bg-emerald-50/60 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/30 dark:text-emerald-400",
+    badgeClass: "bg-emerald-500",
+    rowSelectedClass: "bg-emerald-50 dark:bg-emerald-950/30",
+    checkClass: "border-emerald-500 bg-emerald-500 text-white",
+    groupCellClass: "bg-emerald-50/70 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400",
+  },
+  {
+    key: "social",
+    label: "사회",
+    sublabel: "Social",
+    icon: Users,
+    activeClass: "border-blue-500 bg-blue-50/60 text-blue-700 dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-400",
+    badgeClass: "bg-blue-500",
+    rowSelectedClass: "bg-blue-50 dark:bg-blue-950/30",
+    checkClass: "border-blue-500 bg-blue-500 text-white",
+    groupCellClass: "bg-blue-50/70 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400",
+  },
+  {
+    key: "governance",
+    label: "거버넌스",
+    sublabel: "Governance",
+    icon: Scale,
+    activeClass: "border-violet-500 bg-violet-50/60 text-violet-700 dark:border-violet-400 dark:bg-violet-950/30 dark:text-violet-400",
+    badgeClass: "bg-violet-500",
+    rowSelectedClass: "bg-violet-50 dark:bg-violet-950/30",
+    checkClass: "border-violet-500 bg-violet-500 text-white",
+    groupCellClass: "bg-violet-50/70 text-violet-700 dark:bg-violet-950/20 dark:text-violet-400",
+  },
+];
+
+/** 동일 group이 연속되는 항목들의 rowSpan 맵을 계산 */
+function calcGroupSpans(items: KpiItem[]): Map<number, number> {
+  const spans = new Map<number, number>();
+  let i = 0;
+  while (i < items.length) {
+    const group = items[i].group;
+    let count = 1;
+    while (i + count < items.length && items[i + count].group === group) count++;
+    spans.set(i, count);
+    i += count;
+  }
+  return spans;
+}
 
 export default function KpiPage() {
   const router = useRouter();
-  const { state, updateKpi, markStepComplete } = useWizardStore();
-  const { kpi, organization } = state;
+  const [activeTab, setActiveTab] = useState<KpiCategory>("environmental");
+  const { state, hydrated, updateKpi, markStepComplete } = useWizardStore();
+  const { kpi, organization, framework } = state;
 
-  const aiRec = organization.industry ? getAiRecommendation(organization.industry) : null;
+  const selectedFrameworks = framework.selected;
+  const fwRec = getKpiRecommendationsByFrameworks(selectedFrameworks);
+  const hasFwRec = fwRec.environmental.length > 0 || fwRec.social.length > 0 || fwRec.governance.length > 0;
 
-  // 산업 선택 시 AI 추천 KPI 자동 선택 (첫 방문 시)
+  // 산업 AI 추천은 프레임워크 추천이 없을 때 폴백으로 사용
+  const aiRec = !hasFwRec && organization.industry ? getAiRecommendation(organization.industry) : null;
+
+  // hydrated 후 실행 — localStorage 로드 전에는 framework.selected가 비어있어 추천이 계산되지 않음
   useEffect(() => {
-    if (aiRec && !state.completedSteps.includes(4)) {
-      if (kpi.environmental.length === 0 && kpi.social.length === 0) {
-        updateKpi({
-          environmental: aiRec.kpi.environmental,
-          social: aiRec.kpi.social,
-          governance: aiRec.kpi.governance,
-        });
+    if (!hydrated) return;
+    if (state.completedSteps.includes(5)) return;
+    if (kpi.environmental.length > 0 || kpi.social.length > 0 || kpi.governance.length > 0) return;
+
+    const rec = getKpiRecommendationsByFrameworks(state.framework.selected);
+    const hasRec = rec.environmental.length > 0 || rec.social.length > 0 || rec.governance.length > 0;
+    if (hasRec) {
+      updateKpi({ environmental: rec.environmental, social: rec.social, governance: rec.governance });
+    } else if (state.organization.industry) {
+      const industryRec = getAiRecommendation(state.organization.industry);
+      if (industryRec) {
+        updateKpi({ environmental: industryRec.kpi.environmental, social: industryRec.kpi.social, governance: industryRec.kpi.governance });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hydrated]);
 
-  const toggle = (category: KpiCategory, item: string) => {
+  const toggle = (category: KpiCategory, item: KpiItem) => {
     const current = kpi[category];
     updateKpi({
-      [category]: current.includes(item)
-        ? current.filter((k) => k !== item)
-        : [...current, item],
+      [category]: current.includes(item.name)
+        ? current.filter((k) => k !== item.name)
+        : [...current, item.name],
     });
   };
 
-  const handleNext = () => {
-    markStepComplete(4);
-    router.push("/getting-started/framework");
+  const handleNext = async () => {
+    // 선택된 KPI를 kpi_masters 테이블에 upsert
+    const domainMap: Record<KpiCategory, string> = {
+      environmental: "environment",
+      social: "social",
+      governance: "governance",
+    };
+    const items: { code: string; name: string; esgDomain: string; category: string; unit: string; description: string }[] = [];
+    (["environmental", "social", "governance"] as KpiCategory[]).forEach((domain) => {
+      kpi[domain].forEach((name) => {
+        const item = ALL_KPI[domain].find((k) => k.name === name);
+        if (!item) return;
+        items.push({
+          code: `${domain.slice(0, 3).toUpperCase()}-${name.slice(0, 46)}`,
+          name: item.name,
+          esgDomain: domainMap[domain],
+          category: item.group,
+          unit: item.criteria.length < 20 ? item.criteria : "—",
+          description: item.description,
+        });
+      });
+    });
+
+    await fetch("/api/kpi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "setup-kpis", items }),
+    });
+
+    markStepComplete(5);
+    router.push("/getting-started");
   };
 
   const totalSelected = kpi.environmental.length + kpi.social.length + kpi.governance.length;
+  const activeCat = CATEGORIES.find((c) => c.key === activeTab)!;
+
+  // 현재 탭의 추천 목록: 프레임워크 기반 우선, 없으면 산업 AI 폴백
+  const recommended: string[] = hasFwRec ? fwRec[activeTab] : (aiRec?.kpi[activeTab] ?? []);
+
+  const items = ALL_KPI[activeTab];
+  const groupSpans = calcGroupSpans(items);
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="mb-2">
-        <h2 className="text-base font-bold text-foreground">④ KPI 선택</h2>
+        <h2 className="text-base font-bold text-foreground">⑤ KPI 선택</h2>
         <p className="text-sm text-muted-foreground">
           관리할 ESG KPI를 선택해 주세요.
-          {aiRec && (
+          {hasFwRec && (
             <span className="ml-2 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
               <Sparkles className="h-3 w-3" />
-              {organization.industry} 산업 AI 추천이 자동 적용됐습니다.
+              선택한 공시 기준({selectedFrameworks.join(", ")}) 기반으로 자동 추천됩니다.
+            </span>
+          )}
+          {!hasFwRec && aiRec && (
+            <span className="ml-2 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+              <Sparkles className="h-3 w-3" />
+              {organization.industry} 산업 AI 추천이 적용됐습니다.
             </span>
           )}
         </p>
       </div>
 
-      {aiRec && (
+      {/* 추천 기준 안내 배너 */}
+      {hasFwRec && (
+        <div className="mb-5 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800 dark:bg-violet-950">
+          <p className="mb-1.5 text-xs font-semibold text-violet-700 dark:text-violet-400">
+            💡 선택한 공시 기준에서 요구하는 핵심 KPI가 자동으로 체크됩니다. 필요에 따라 추가/제거해 주세요.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {selectedFrameworks.map((fw) => (
+              <span key={fw} className="rounded-full bg-violet-600 px-2.5 py-0.5 text-[10px] font-bold text-white">
+                {fw}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {!hasFwRec && aiRec && (
         <div className="mb-5 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800 dark:bg-violet-950">
           <p className="text-xs font-semibold text-violet-700 dark:text-violet-400">
             💡 AI 추천 기준: {organization.industry} 산업에서 주로 보고되는 핵심 KPI가 체크됩니다.
@@ -76,62 +203,158 @@ export default function KpiPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-5">
-        {(["environmental", "social", "governance"] as KpiCategory[]).map((cat) => {
-          const meta = CATEGORY_LABELS[cat];
-          const recommended = aiRec?.kpi[cat] ?? [];
-          return (
-            <div key={cat}>
-              <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <span>{meta.emoji}</span> {meta.label}
-                <span className="ml-auto text-xs font-normal text-muted-foreground">
-                  {kpi[cat].length}개 선택
-                </span>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {ALL_KPI[cat].map((item) => {
-                  const selected = kpi[cat].includes(item);
-                  const isAiRec = recommended.includes(item);
-                  return (
-                    <button
-                      key={item}
-                      onClick={() => toggle(cat, item)}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-all",
-                        selected
-                          ? cat === "environmental"
-                            ? "border-emerald-400 bg-emerald-100 font-semibold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
-                            : cat === "social"
-                            ? "border-blue-400 bg-blue-100 font-semibold text-blue-800 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                            : "border-violet-400 bg-violet-100 font-semibold text-violet-800 dark:border-violet-700 dark:bg-violet-900 dark:text-violet-300"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      )}
-                    >
-                      {isAiRec && <Sparkles className="h-3 w-3 text-violet-500 shrink-0" />}
-                      {item}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+      {/* 탭 + 그리드 */}
+      <div className="rounded-xl border border-border overflow-hidden">
+        {/* 탭 헤더 */}
+        <div className="flex border-b border-border">
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const count = kpi[cat.key].length;
+            const recCount = hasFwRec ? fwRec[cat.key].length : (aiRec?.kpi[cat.key].length ?? 0);
+            const isActive = activeTab === cat.key;
+            return (
+              <button
+                key={cat.key}
+                onClick={() => setActiveTab(cat.key)}
+                className={cn(
+                  "flex flex-1 flex-col items-center justify-center gap-0.5 px-4 py-3 text-xs font-medium transition-colors border-b-2 -mb-px",
+                  isActive ? cat.activeClass : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="font-semibold">{cat.label}</span>
+                  <span className="text-[10px] font-normal opacity-70">{cat.sublabel}</span>
+                  {count > 0 && (
+                    <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white", cat.badgeClass)}>
+                      {count}
+                    </span>
+                  )}
+                  {recCount > 0 && (
+                    <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 dark:bg-violet-900 dark:text-violet-400">
+                      추천 {recCount}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 데이터 그리드 */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="w-28 px-3 py-2.5 text-left font-semibold text-muted-foreground">구분</th>
+                <th className="w-10 px-3 py-2.5 text-center font-semibold text-muted-foreground">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded border border-border bg-background" />
+                </th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-left font-semibold text-muted-foreground">KPI 항목명</th>
+                <th className="px-3 py-2.5 text-left font-semibold text-muted-foreground">설명</th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-left font-semibold text-muted-foreground">선정 사유</th>
+                <th className="whitespace-nowrap px-3 py-2.5 text-left font-semibold text-muted-foreground">요구 기준</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {items.map((item, idx) => {
+                const selected = kpi[activeTab].includes(item.name);
+                const isRec = recommended.includes(item.name);
+                const matchingFws = hasFwRec ? getMatchingFrameworks(item, selectedFrameworks) : [];
+                const isFirstInGroup = groupSpans.has(idx);
+                const rowSpan = groupSpans.get(idx);
+
+                return (
+                  <tr
+                    key={item.name}
+                    onClick={() => toggle(activeTab, item)}
+                    className={cn(
+                      "cursor-pointer transition-colors hover:bg-muted/30",
+                      selected ? activeCat.rowSelectedClass : ""
+                    )}
+                  >
+                    {/* 구분 (rowspan) */}
+                    {isFirstInGroup && (
+                      <td
+                        rowSpan={rowSpan}
+                        className={cn(
+                          "border-r border-border px-3 py-2.5 align-middle text-center text-[11px] font-semibold leading-snug",
+                          activeCat.groupCellClass
+                        )}
+                      >
+                        {item.group}
+                      </td>
+                    )}
+                    {/* 체크박스 */}
+                    <td className="px-3 py-2.5 text-center">
+                      <span
+                        className={cn(
+                          "inline-flex h-4 w-4 items-center justify-center rounded border transition-colors",
+                          selected ? activeCat.checkClass : "border-border bg-background"
+                        )}
+                      >
+                        {selected && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                      </span>
+                    </td>
+                    {/* KPI명 + 프레임워크 배지 */}
+                    <td className="whitespace-nowrap px-3 py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        {isRec && <Sparkles className="h-3 w-3 shrink-0 text-violet-500" />}
+                        <span className={cn("font-medium", selected ? "text-foreground" : "text-foreground/80")}>
+                          {item.name}
+                        </span>
+                        {matchingFws.length > 0 && (
+                          <>
+                            {matchingFws.slice(0, 2).map((fw) => (
+                              <span
+                                key={fw}
+                                className="rounded px-1 py-0.5 text-[9px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-400"
+                              >
+                                {fw}
+                              </span>
+                            ))}
+                            {matchingFws.length > 2 && (
+                              <span className="text-[9px] text-violet-500">+{matchingFws.length - 2}</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    {/* 설명 */}
+                    <td className="px-3 py-2.5 text-muted-foreground leading-snug">{item.description}</td>
+                    {/* 선정 사유 */}
+                    <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{item.reason}</td>
+                    {/* 요구 기준 */}
+                    <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{item.criteria}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="mt-5 rounded-lg border border-border bg-muted/30 px-4 py-2.5">
-        <p className="text-xs text-muted-foreground">
-          총 <span className="font-semibold text-foreground">{totalSelected}개</span> KPI 선택됨
-          {aiRec && (
-            <span className="ml-2 text-violet-600 dark:text-violet-400">
-              (AI 추천 포함)
+      {/* 전체 요약 */}
+      <div className="mt-4 rounded-lg border border-border bg-muted/30 px-4 py-2.5">
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <span>총 <span className="font-semibold text-foreground">{totalSelected}개</span> KPI 선택됨</span>
+          {CATEGORIES.map((cat) => (
+            <span key={cat.key}>
+              {cat.label} <span className="font-semibold text-foreground">{kpi[cat.key].length}</span>
+            </span>
+          ))}
+          {hasFwRec && (
+            <span className="text-violet-600 dark:text-violet-400">
+              <Sparkles className="mr-0.5 inline h-3 w-3" />
+              {selectedFrameworks.join(" · ")} 기반 추천
             </span>
           )}
-        </p>
+        </div>
       </div>
 
       <div className="mt-6 flex justify-between">
         <button
-          onClick={() => router.push("/getting-started/scope")}
+          onClick={() => router.push("/getting-started/framework")}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> 이전
@@ -141,7 +364,7 @@ export default function KpiPage() {
           disabled={totalSelected === 0}
           className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40 hover:opacity-90"
         >
-          다음: 공시 기준 선택 <ArrowRight className="h-4 w-4" />
+          설정 완료! <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </div>

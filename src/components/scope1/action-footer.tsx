@@ -1,33 +1,114 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { CheckCircle2, Clock, FileCheck, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export type DataStatus = "draft" | "reviewing" | "confirmed";
 
 interface ActionFooterProps {
   year: string;
+  status: DataStatus;
+  hasErrors: boolean;
+  onRequestValidation: () => Promise<void>;
+  onSave: () => Promise<void>;
 }
 
-export function ActionFooter({ year }: ActionFooterProps) {
+const STATUS_CONFIG: Record<DataStatus, { label: string; className: string; icon?: React.ElementType }> = {
+  draft: {
+    label: "Draft",
+    className: "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  },
+  reviewing: {
+    label: "검토 중",
+    className: "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+    icon: Clock,
+  },
+  confirmed: {
+    label: "확정됨",
+    className: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    icon: CheckCircle2,
+  },
+};
+
+export function ActionFooter({ year, status, hasErrors, onRequestValidation, onSave }: ActionFooterProps) {
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG["draft"];
+  const StatusIcon = cfg.icon;
+
+  const handleRequestValidation = async () => {
+    setIsRequesting(true);
+    try { await onRequestValidation(); } finally { setIsRequesting(false); }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try { await onSave(); } finally { setIsSaving(false); }
+  };
+
   return (
-    <div className="mt-6 flex flex-col items-stretch justify-between gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
-      <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{year}년</span> 데이터는{" "}
-        <span className="font-semibold text-amber-700">Draft</span> 상태입니다.
-      </p>
+    <div className="flex flex-col items-stretch justify-between gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">{year}년</span> 데이터 상태
+        <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold", cfg.className)}>
+          {StatusIcon && <StatusIcon className="h-3 w-3" />}
+          {cfg.label}
+        </span>
+        {hasErrors && (
+          <span className="text-red-600 dark:text-red-400">— 오류를 먼저 수정해 주세요</span>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm">
-          검증 요청
+        {/* 검증 요청: draft 상태이고 오류 없을 때만 활성 */}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isRequesting || status !== "draft" || hasErrors}
+          onClick={handleRequestValidation}
+          title={
+            hasErrors
+              ? "오류를 먼저 수정해 주세요"
+              : status !== "draft"
+              ? status === "reviewing" ? "이미 검증 요청됐습니다" : "확정된 데이터입니다"
+              : undefined
+          }
+        >
+          {isRequesting ? (
+            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />요청 중...</>
+          ) : (
+            "검증 요청"
+          )}
         </Button>
-        <Button variant="secondary" size="sm">
+
+        {/* 제출: reviewing 상태일 때만 활성 */}
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={status !== "reviewing"}
+          title={status !== "reviewing" ? "검증 요청 후 제출 가능합니다" : undefined}
+        >
+          <FileCheck className="mr-1.5 h-3.5 w-3.5" />
           제출
         </Button>
+
+        {/* 저장: confirmed가 아닐 때 활성 */}
         <Button
           size="sm"
-          className="bg-emerald-600 text-emerald-50 hover:bg-emerald-700"
+          className="bg-emerald-600 text-emerald-50 hover:bg-emerald-700 disabled:opacity-50"
+          disabled={isSaving || status === "confirmed"}
+          onClick={handleSave}
+          title={status === "confirmed" ? "확정된 데이터는 수정할 수 없습니다" : undefined}
         >
-          저장
+          {isSaving ? (
+            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />저장 중...</>
+          ) : (
+            "저장"
+          )}
         </Button>
       </div>
     </div>
   );
 }
-

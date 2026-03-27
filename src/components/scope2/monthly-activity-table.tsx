@@ -112,6 +112,10 @@ export function Scope2MonthlyActivityTable({
   metaRight,
   headerRight,
 }: Scope2MonthlyActivityTableProps) {
+  const now = new Date();
+  const isCurrentYear = year === String(now.getFullYear());
+  const currentMonthIdx = now.getMonth();
+
   const factor = getEmissionFactorForEnergy(energyType);
   const gasFactors = SCOPE2_GAS_FACTORS[energyType];
   const factorSource = SCOPE2_FACTOR_SOURCES[energyType];
@@ -195,11 +199,21 @@ export function Scope2MonthlyActivityTable({
             <thead>
               <tr className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
                 <th className="w-24 px-3 py-2 text-left font-medium">구분</th>
-                {MONTH_LABELS.map((label, idx) => (
-                  <th key={label} className={cn("px-1 py-2 text-right font-medium", selectedMonth === idx && "bg-primary/10 text-primary")}>
-                    {label}
-                  </th>
-                ))}
+                {MONTH_LABELS.map((label, idx) => {
+                  const isCurrent = isCurrentYear && idx === currentMonthIdx;
+                  const isSelected = selectedMonth === idx;
+                  return (
+                    <th key={label} className={cn(
+                      "px-1 py-2 text-right font-medium",
+                      isSelected ? "bg-primary/10 text-primary" : isCurrent ? "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400" : ""
+                    )}>
+                      {label}
+                      {isCurrent && !isSelected && (
+                        <span className="ml-0.5 inline-block h-1 w-1 rounded-full bg-amber-400 align-middle" />
+                      )}
+                    </th>
+                  );
+                })}
                 <th className="w-24 px-3 py-2 text-right font-medium">합계</th>
               </tr>
             </thead>
@@ -210,8 +224,12 @@ export function Scope2MonthlyActivityTable({
                 {MONTH_LABELS.map((_, idx) => {
                   const attCount = data?.filter((a) => a.month === idx + 1).length ?? 0;
                   const isSelected = selectedMonth === idx;
+                  const isCurrent = isCurrentYear && idx === currentMonthIdx;
                   return (
-                    <td key={idx} className={cn("px-1 py-1 text-right", isSelected && "bg-primary/5")}>
+                    <td key={idx} className={cn(
+                      "px-1 py-1 text-right",
+                      isSelected ? "bg-primary/5" : isCurrent ? "bg-amber-50/60 dark:bg-amber-950/10" : ""
+                    )}>
                       <NumberInput
                         value={activityByMonth[idx] ?? 0}
                         onChange={(v) => {
@@ -223,7 +241,7 @@ export function Scope2MonthlyActivityTable({
                         className={cn(
                           "h-8 w-full min-w-0 rounded-md border bg-transparent px-1 py-1 text-right text-xs ring-offset-background",
                           "focus:outline-none focus:ring-1 focus:ring-ring",
-                          isSelected ? "border-primary" : "border-input"
+                          isSelected ? "border-primary" : isCurrent ? "border-amber-300 dark:border-amber-700" : "border-input"
                         )}
                       />
                       <button
@@ -248,7 +266,10 @@ export function Scope2MonthlyActivityTable({
               <tr className="border-b border-border/60">
                 <td className="px-3 py-2 text-xs font-medium">배출량 (tCO₂e)</td>
                 {emissions.map((v, idx) => (
-                  <td key={idx} className={cn("px-2 py-2 text-right text-xs", selectedMonth === idx && "bg-primary/5")}>
+                  <td key={idx} className={cn(
+                    "px-2 py-2 text-right text-xs",
+                    selectedMonth === idx ? "bg-primary/5" : isCurrentYear && idx === currentMonthIdx ? "bg-amber-50/60 dark:bg-amber-950/10" : ""
+                  )}>
                     {formatNumber(v, 2)}
                   </td>
                 ))}
@@ -256,17 +277,17 @@ export function Scope2MonthlyActivityTable({
               </tr>
               <tr className="border-b border-border/60 bg-muted/20">
                 <td className="px-3 py-2 text-xs text-muted-foreground pl-5">CO₂ (tCO₂)</td>
-                {gasEmissions.co2.map((v, idx) => <td key={idx} className="px-2 py-2 text-right text-xs text-muted-foreground">{formatNumber(v, 3)}</td>)}
+                {gasEmissions.co2.map((v, idx) => <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-amber-50/60 dark:bg-amber-950/10")}>{formatNumber(v, 3)}</td>)}
                 <td className="px-3 py-2 text-right text-xs text-muted-foreground">{formatNumber(gasEmissions.co2.reduce((s, v) => s + v, 0), 3)}</td>
               </tr>
               <tr className="border-b border-border/60 bg-muted/20">
                 <td className="px-3 py-2 text-xs text-muted-foreground pl-5">CH₄ (tCH₄)</td>
-                {gasEmissions.ch4.map((v, idx) => <td key={idx} className="px-2 py-2 text-right text-xs text-muted-foreground">{formatNumber(v, 3)}</td>)}
+                {gasEmissions.ch4.map((v, idx) => <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-amber-50/60 dark:bg-amber-950/10")}>{formatNumber(v, 3)}</td>)}
                 <td className="px-3 py-2 text-right text-xs text-muted-foreground">{formatNumber(gasEmissions.ch4.reduce((s, v) => s + v, 0), 3)}</td>
               </tr>
               <tr className="bg-muted/20">
                 <td className="px-3 py-2 text-xs text-muted-foreground pl-5">N₂O (tN₂O)</td>
-                {gasEmissions.n2o.map((v, idx) => <td key={idx} className="px-2 py-2 text-right text-xs text-muted-foreground">{formatNumber(v, 3)}</td>)}
+                {gasEmissions.n2o.map((v, idx) => <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-amber-50/60 dark:bg-amber-950/10")}>{formatNumber(v, 3)}</td>)}
                 <td className="px-3 py-2 text-right text-xs text-muted-foreground">{formatNumber(gasEmissions.n2o.reduce((s, v) => s + v, 0), 3)}</td>
               </tr>
             </tbody>
@@ -304,10 +325,10 @@ export function Scope2MonthlyActivityTable({
             </div>
 
             {currentAtts.length === 0 ? (
-              <div className={cn("flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed py-8 text-muted-foreground transition-colors", dragOver ? "border-primary bg-primary/10" : "border-border")}>
-                <Upload className="h-8 w-8" />
-                <p className="text-sm">고지서, 영수증 등 파일을 드래그하거나 업로드 버튼을 클릭하세요</p>
-                <p className="text-xs">PDF, 이미지, 문서 등 모든 파일 지원</p>
+              <div className={cn("flex flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed py-4 text-muted-foreground transition-colors", dragOver ? "border-primary bg-primary/10" : "border-border")}>
+                <Upload className="h-5 w-5" />
+                <p className="text-xs">고지서, 영수증 등 파일을 드래그하거나 업로드 버튼을 클릭하세요</p>
+                <p className="text-[11px]">PDF, 이미지, 문서 등 모든 파일 지원</p>
               </div>
             ) : (
               <div className={cn("space-y-2 rounded-md border-2 border-dashed p-2 transition-colors", dragOver ? "border-primary bg-primary/10" : "border-transparent")}>
