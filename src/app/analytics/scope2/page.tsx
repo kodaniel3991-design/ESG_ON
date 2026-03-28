@@ -231,6 +231,8 @@ export default function Scope2Page() {
             unitLabel={selectedFacility?.unit ?? "MWh"}
             facilityName={selectedFacility?.facilityName || "배출시설 미선택"}
             facilityId={selectedFacilityId}
+            factorSourceOverride={dbFactor?.source}
+            gasFactorsOverride={dbFactor ? { co2: dbFactor.co2, ch4: dbFactor.ch4, n2o: dbFactor.n2o } : undefined}
             year={year}
             activityByMonth={currentActivity}
             onChangeActivity={handleActivityChange}

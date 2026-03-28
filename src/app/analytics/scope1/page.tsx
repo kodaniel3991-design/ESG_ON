@@ -381,11 +381,13 @@ export default function Scope1Page() {
             key={`${selectedFacilityId}-${year}`}
             activityByMonth={currentActivity}
             onChangeActivity={handleActivityChange}
-            fuel={toFuelType(selectedFacility?.fuelName ?? "LNG")}
+            fuel={fuelType}
             unitLabel={selectedFacility?.unit ?? "Nm3"}
             facilityName={selectedFacility?.facilityName || "배출시설 미선택"}
             facilityId={selectedFacilityId}
             year={year}
+            factorSourceOverride={dbFactor?.source}
+            gasFactorsOverride={dbFactor ? { co2: dbFactor.co2, ch4: dbFactor.ch4, n2o: dbFactor.n2o, gwpCh4: dbFactor.gwpCh4, gwpN2o: dbFactor.gwpN2o } : undefined}
             metaRight={
               <div className="flex items-center gap-3 text-xs whitespace-nowrap">
                 <div className="flex items-center gap-2">

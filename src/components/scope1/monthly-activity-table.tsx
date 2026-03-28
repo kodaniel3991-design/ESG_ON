@@ -34,6 +34,8 @@ interface MonthlyActivityTableProps {
   year: string;
   metaRight?: React.ReactNode;
   headerRight?: React.ReactNode;
+  factorSourceOverride?: string;
+  gasFactorsOverride?: { co2: number; ch4: number; n2o: number; gwpCh4: number; gwpN2o: number };
 }
 
 function fmt3(n: number) {
@@ -124,14 +126,18 @@ export function MonthlyActivityTable({
   year,
   metaRight,
   headerRight,
+  factorSourceOverride,
+  gasFactorsOverride,
 }: MonthlyActivityTableProps) {
   const now = new Date();
   const isCurrentYear = year === String(now.getFullYear());
   const currentMonthIdx = now.getMonth(); // 0-indexed
 
   const factor = getEmissionFactorForFuel(fuel);
-  const gasFactors = SCOPE1_GAS_FACTORS[fuel];
-  const factorSource = SCOPE1_FACTOR_SOURCES[fuel];
+  const gasFactors = gasFactorsOverride
+    ? { co2: gasFactorsOverride.co2, ch4: gasFactorsOverride.ch4, n2o: gasFactorsOverride.n2o, gwp_ch4: gasFactorsOverride.gwpCh4, gwp_n2o: gasFactorsOverride.gwpN2o }
+    : SCOPE1_GAS_FACTORS[fuel];
+  const factorSource = factorSourceOverride ?? SCOPE1_FACTOR_SOURCES[fuel];
 
   const emissionData = useMemo(
     () => calculateMonthlyEmissions(activityByMonth, fuel),
@@ -139,10 +145,17 @@ export function MonthlyActivityTable({
   );
 
   const totalEmission = emissionData.reduce((sum, row) => sum + row.emission, 0);
-  const gasEmissions = useMemo(
-    () => calculateGasEmissions(activityByMonth, fuel),
-    [activityByMonth, fuel],
-  );
+  const gasEmissions = useMemo(() => {
+    if (gasFactorsOverride) {
+      const safe = (v: number) => (Number.isNaN(v) ? 0 : v);
+      return {
+        co2: activityByMonth.map((v) => safe(v) * gasFactorsOverride.co2),
+        ch4: activityByMonth.map((v) => safe(v) * gasFactorsOverride.ch4),
+        n2o: activityByMonth.map((v) => safe(v) * gasFactorsOverride.n2o),
+      };
+    }
+    return calculateGasEmissions(activityByMonth, fuel);
+  }, [activityByMonth, fuel, gasFactorsOverride]);
 
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [viewerAtt, setViewerAtt] = useState<AttachmentMeta | null>(null);

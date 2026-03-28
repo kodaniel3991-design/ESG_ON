@@ -12,9 +12,34 @@ import { Search, RotateCcw, Download } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+export interface ValidationFilterState {
+  search: string;
+  scope: string;
+  status: string;
+  anomalyOnly: boolean;
+}
+
+interface ValidationFiltersProps {
+  filters?: ValidationFilterState;
+  onFiltersChange?: (filters: ValidationFilterState) => void;
+}
+
 /** 검증 화면 필터 바 - Environment Filters 구조 재사용 */
-export function ValidationFilters() {
-  const [anomalyOnly, setAnomalyOnly] = useState(false);
+export function ValidationFilters({ filters, onFiltersChange }: ValidationFiltersProps) {
+  const [localSearch, setLocalSearch] = useState(filters?.search ?? "");
+  const [localScope, setLocalScope] = useState(filters?.scope ?? "all");
+  const [localStatus, setLocalStatus] = useState(filters?.status ?? "all");
+  const [anomalyOnly, setAnomalyOnly] = useState(filters?.anomalyOnly ?? false);
+
+  const emit = (patch: Partial<ValidationFilterState>) => {
+    onFiltersChange?.({
+      search: localSearch,
+      scope: localScope,
+      status: localStatus,
+      anomalyOnly,
+      ...patch,
+    });
+  };
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1),
@@ -30,7 +55,9 @@ export function ValidationFilters() {
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
           type="search"
-          placeholder="검색..."
+          placeholder="배출원, 사업장, 카테고리 검색..."
+          value={localSearch}
+          onChange={(e) => { setLocalSearch(e.target.value); emit({ search: e.target.value }); }}
           className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
         />
       </div>
@@ -57,15 +84,15 @@ export function ValidationFilters() {
           ))}
         </SelectContent>
       </Select>
-      <Select defaultValue="all">
+      <Select value={localScope} onValueChange={(v) => { setLocalScope(v); emit({ scope: v }); }}>
         <SelectTrigger className="w-[110px]">
           <SelectValue placeholder="Scope" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">전체</SelectItem>
-          <SelectItem value="scope1">Scope 1</SelectItem>
-          <SelectItem value="scope2">Scope 2</SelectItem>
-          <SelectItem value="scope3">Scope 3</SelectItem>
+          <SelectItem value="Scope 1">Scope 1</SelectItem>
+          <SelectItem value="Scope 2">Scope 2</SelectItem>
+          <SelectItem value="Scope 3">Scope 3</SelectItem>
         </SelectContent>
       </Select>
       <Select defaultValue="all">
@@ -93,18 +120,16 @@ export function ValidationFilters() {
           <SelectItem value="ulsan">울산공장</SelectItem>
         </SelectContent>
       </Select>
-      <Select defaultValue="all">
+      <Select value={localStatus} onValueChange={(v) => { setLocalStatus(v); emit({ status: v }); }}>
         <SelectTrigger className="w-[130px]">
           <SelectValue placeholder="상태" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">전체</SelectItem>
-          <SelectItem value="submitted">Submitted</SelectItem>
-          <SelectItem value="under_review">Under Review</SelectItem>
-          <SelectItem value="verified">Verified</SelectItem>
-          <SelectItem value="ai_anomaly">AI Anomaly</SelectItem>
-          <SelectItem value="missing">Missing</SelectItem>
-          <SelectItem value="needs_evidence">Needs Evidence</SelectItem>
+          <SelectItem value="submitted">제출됨</SelectItem>
+          <SelectItem value="under_review">검토 중</SelectItem>
+          <SelectItem value="verified">검증 완료</SelectItem>
+          <SelectItem value="needs_evidence">증빙 필요</SelectItem>
         </SelectContent>
       </Select>
       <Select defaultValue="all">
@@ -132,7 +157,7 @@ export function ValidationFilters() {
       <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
-          onClick={() => setAnomalyOnly(!anomalyOnly)}
+          onClick={() => { const next = !anomalyOnly; setAnomalyOnly(next); emit({ anomalyOnly: next }); }}
           className={cn(
             "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
             anomalyOnly
@@ -142,7 +167,10 @@ export function ValidationFilters() {
         >
           이상 항목만 보기
         </button>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => {
+          setLocalSearch(""); setLocalScope("all"); setLocalStatus("all"); setAnomalyOnly(false);
+          onFiltersChange?.({ search: "", scope: "all", status: "all", anomalyOnly: false });
+        }}>
           <RotateCcw className="mr-1 h-3.5 w-3.5" />
           Reset
         </Button>

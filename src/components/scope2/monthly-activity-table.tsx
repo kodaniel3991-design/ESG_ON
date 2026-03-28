@@ -72,6 +72,8 @@ interface Scope2MonthlyActivityTableProps {
   year: string;
   metaRight?: React.ReactNode;
   headerRight?: React.ReactNode;
+  factorSourceOverride?: string;
+  gasFactorsOverride?: { co2: number; ch4: number; n2o: number };
 }
 
 function FileViewer({ att, onClose }: { att: AttachmentMeta; onClose: () => void }) {
@@ -111,24 +113,33 @@ export function Scope2MonthlyActivityTable({
   year,
   metaRight,
   headerRight,
+  factorSourceOverride,
+  gasFactorsOverride,
 }: Scope2MonthlyActivityTableProps) {
   const now = new Date();
   const isCurrentYear = year === String(now.getFullYear());
   const currentMonthIdx = now.getMonth();
 
   const factor = getEmissionFactorForEnergy(energyType);
-  const gasFactors = SCOPE2_GAS_FACTORS[energyType];
-  const factorSource = SCOPE2_FACTOR_SOURCES[energyType];
+  const gasFactors = gasFactorsOverride ?? SCOPE2_GAS_FACTORS[energyType];
+  const factorSource = factorSourceOverride ?? SCOPE2_FACTOR_SOURCES[energyType];
 
   const emissions = useMemo(
     () => activityByMonth.map((a) => (Number.isNaN(a) ? 0 : a) * factor),
     [activityByMonth, factor],
   );
   const totalEmission = emissions.reduce((sum, v) => sum + v, 0);
-  const gasEmissions = useMemo(
-    () => calculateScope2GasEmissions(activityByMonth, energyType),
-    [activityByMonth, energyType],
-  );
+  const gasEmissions = useMemo(() => {
+    if (gasFactorsOverride) {
+      const safe = (v: number) => (Number.isNaN(v) ? 0 : v);
+      return {
+        co2: activityByMonth.map((v) => safe(v) * gasFactorsOverride.co2),
+        ch4: activityByMonth.map((v) => safe(v) * gasFactorsOverride.ch4),
+        n2o: activityByMonth.map((v) => safe(v) * gasFactorsOverride.n2o),
+      };
+    }
+    return calculateScope2GasEmissions(activityByMonth, energyType);
+  }, [activityByMonth, energyType, gasFactorsOverride]);
 
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [viewerAtt, setViewerAtt] = useState<AttachmentMeta | null>(null);

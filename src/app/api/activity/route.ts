@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 // GET /api/activity?facilityId=xxx&year=2024
 export async function GET(req: NextRequest) {
   const facilityId = req.nextUrl.searchParams.get("facilityId");
-  const year = req.nextUrl.searchParams.get("year") ?? "2024";
+  const year = req.nextUrl.searchParams.get("year") ?? String(new Date().getFullYear());
   if (!facilityId) {
     return NextResponse.json({ error: "facilityId is required" }, { status: 400 });
   }

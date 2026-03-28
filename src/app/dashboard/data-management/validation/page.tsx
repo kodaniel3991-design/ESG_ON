@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { ValidationSummaryCards } from "@/components/validation/validation-summary-cards";
 import { ValidationAiInsight } from "@/components/validation/validation-ai-insight";
-import { ValidationFilters } from "@/components/validation/validation-filters";
+import { ValidationFilters, type ValidationFilterState } from "@/components/validation/validation-filters";
 import { ValidationDataTable } from "@/components/validation/validation-data-table";
 import { ValidationDetailDrawer } from "@/components/validation/validation-detail-drawer";
 import { ValidationWorkflowSection } from "@/components/validation/validation-workflow-section";
@@ -114,6 +114,7 @@ function buildAiInsight(rows: ValidationDataRow[]): AiInsightType {
 export default function ValidationPage() {
   const queryClient = useQueryClient();
   const [selectedRow, setSelectedRow] = useState<ValidationDataRow | null>(null);
+  const [filters, setFilters] = useState<ValidationFilterState>({ search: "", scope: "all", status: "all", anomalyOnly: false });
 
   // DB에서 검증 목록 로드
   const { data: rawValidations = [], isLoading } = useQuery<any[]>({
@@ -123,6 +124,30 @@ export default function ValidationPage() {
   });
 
   const rows = useMemo(() => rawValidations.map(toValidationRow), [rawValidations]);
+
+  // 필터 적용
+  const filteredRows = useMemo(() => {
+    let result = rows;
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter((r) =>
+        r.emissionSource.toLowerCase().includes(q) ||
+        r.site.toLowerCase().includes(q) ||
+        r.category.toLowerCase().includes(q)
+      );
+    }
+    if (filters.scope !== "all") {
+      result = result.filter((r) => r.scope === filters.scope);
+    }
+    if (filters.status !== "all") {
+      result = result.filter((r) => r.status === filters.status);
+    }
+    if (filters.anomalyOnly) {
+      result = result.filter((r) => r.aiVerification === "anomaly");
+    }
+    return result;
+  }, [rows, filters]);
+
   const summary = useMemo(() => buildSummary(rows), [rows]);
   const workflow = useMemo(() => buildWorkflow(rows), [rows]);
   const quality = useMemo(() => buildQuality(rows), [rows]);
@@ -211,7 +236,7 @@ export default function ValidationPage() {
 
         {/* 3. Filter Bar */}
         <section>
-          <ValidationFilters />
+          <ValidationFilters filters={filters} onFiltersChange={setFilters} />
         </section>
 
         {/* 4. Validation Data Table */}
@@ -220,7 +245,7 @@ export default function ValidationPage() {
             검증 대상 목록 {isLoading && <span className="text-xs text-muted-foreground">(로딩 중...)</span>}
           </h2>
           <ValidationDataTable
-            rows={rows}
+            rows={filteredRows}
             onRowClick={setSelectedRow}
             onStatusChange={handleStatusChange}
           />
