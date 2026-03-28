@@ -43,7 +43,7 @@ export default function GettingStartedLayout({ children }: { children: React.Rea
                     active
                       ? "bg-primary text-primary-foreground"
                       : done
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                      ? "bg-primary/10 text-primary border border-primary/20"
                       : "bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
