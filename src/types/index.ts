@@ -95,6 +95,10 @@ export interface OrganizationSettings {
   organizationName: string;
   organizationAddress?: string;
   organizationAddressDetail?: string;
+  industry?: string;
+  country?: string;
+  employeeCount?: string;
+  revenue?: string;
   worksites: WorksiteItem[];
   defaultWorksiteId?: string;
 }

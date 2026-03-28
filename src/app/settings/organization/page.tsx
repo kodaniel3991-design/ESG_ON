@@ -273,10 +273,14 @@ export default function SettingsOrganizationPage() {
       organizationName: c.organizationName ?? "",
       organizationAddress: c.organizationAddress ?? "",
       organizationAddressDetail: c.organizationAddressDetail ?? "",
+      industry: c.industry ?? "",
+      country: c.country ?? "",
+      employeeCount: c.employeeCount ?? "",
+      revenue: c.revenue ?? "",
       worksites: (c.worksites ?? []).map((w) => ({ ...w })),
       defaultWorksiteId: c.defaultWorksiteId,
     };
-    return { organizationName: "", organizationAddress: "", organizationAddressDetail: "", worksites: [], defaultWorksiteId: undefined };
+    return { organizationName: "", organizationAddress: "", organizationAddressDetail: "", industry: "", country: "", employeeCount: "", revenue: "", worksites: [], defaultWorksiteId: undefined };
   });
   // 편집 취소용 스냅샷
   const [orgSnapshot, setOrgSnapshot] = useState({ organizationName: "", organizationAddress: "", organizationAddressDetail: "" });
@@ -292,6 +296,10 @@ export default function SettingsOrganizationPage() {
       organizationName: data.organizationName ?? "",
       organizationAddress: data.organizationAddress ?? "",
       organizationAddressDetail: data.organizationAddressDetail ?? "",
+      industry: data.industry ?? "",
+      country: data.country ?? "",
+      employeeCount: data.employeeCount ?? "",
+      revenue: data.revenue ?? "",
       worksites: (data.worksites ?? []).map((w) => ({ ...w })),
       defaultWorksiteId: data.defaultWorksiteId,
     });
@@ -496,6 +504,44 @@ export default function SettingsOrganizationPage() {
                     className={inputClass}
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">업종</label>
+                    <input
+                      value={form.industry ?? ""}
+                      onChange={(e) => setForm((p) => ({ ...p, industry: e.target.value }))}
+                      placeholder="제조업, IT 등"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">국가</label>
+                    <input
+                      value={form.country ?? ""}
+                      onChange={(e) => setForm((p) => ({ ...p, country: e.target.value }))}
+                      placeholder="대한민국"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">종업원 수</label>
+                    <input
+                      value={form.employeeCount ?? ""}
+                      onChange={(e) => setForm((p) => ({ ...p, employeeCount: e.target.value }))}
+                      placeholder="예: 100~300명"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">매출 규모</label>
+                    <input
+                      value={form.revenue ?? ""}
+                      onChange={(e) => setForm((p) => ({ ...p, revenue: e.target.value }))}
+                      placeholder="예: 100억 이상"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
               </>
             ) : (
               <dl className="space-y-3 text-sm">
@@ -513,6 +559,24 @@ export default function SettingsOrganizationPage() {
                     <dd>{form.organizationAddressDetail}</dd>
                   </div>
                 )}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <dt className="mb-0.5 text-xs font-medium text-muted-foreground">업종</dt>
+                    <dd>{form.industry || <span className="text-muted-foreground">미입력</span>}</dd>
+                  </div>
+                  <div>
+                    <dt className="mb-0.5 text-xs font-medium text-muted-foreground">국가</dt>
+                    <dd>{form.country || <span className="text-muted-foreground">미입력</span>}</dd>
+                  </div>
+                  <div>
+                    <dt className="mb-0.5 text-xs font-medium text-muted-foreground">종업원 수</dt>
+                    <dd>{form.employeeCount || <span className="text-muted-foreground">미입력</span>}</dd>
+                  </div>
+                  <div>
+                    <dt className="mb-0.5 text-xs font-medium text-muted-foreground">매출 규모</dt>
+                    <dd>{form.revenue || <span className="text-muted-foreground">미입력</span>}</dd>
+                  </div>
+                </div>
               </dl>
             )}
           </CardContent>
