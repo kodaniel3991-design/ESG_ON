@@ -76,7 +76,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border-2 border-border p-8 shadow-sm" style={{ backgroundColor: "#f6fbeb" }}>
+        <div className="rounded-2xl border-2 border-border bg-card p-8 shadow-sm">
           <h1 className="mb-6 text-center text-xl font-semibold">로그인</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -142,7 +142,7 @@ export default function LoginPage() {
               >
                 <span
                   className="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors"
-                  style={autoLogin ? { backgroundColor: "#7cc520", borderColor: "#7cc520" } : undefined}
+                  style={autoLogin ? { backgroundColor: "hsl(var(--carbon-success))", borderColor: "hsl(var(--carbon-success))" } : undefined}
                 >
                   {autoLogin && (
                     <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
@@ -171,8 +171,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ backgroundColor: "#7cc520" }}
-              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-lg bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "로그인 중..." : "로그인"}
             </button>

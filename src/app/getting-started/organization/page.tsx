@@ -91,7 +91,7 @@ export default function OrganizationPage() {
         <div className="col-span-full flex flex-col gap-1.5">
           <label className="flex items-center gap-2 text-sm font-medium text-foreground">
             산업군 <span className="text-destructive">*</span>
-            <span className="flex items-center gap-1 text-[11px] font-normal text-violet-600 dark:text-violet-400">
+            <span className="flex items-center gap-1 text-[11px] font-normal text-carbon-success">
               <Sparkles className="h-3 w-3" /> 선택 시 KPI 자동 추천
             </span>
           </label>
@@ -114,26 +114,26 @@ export default function OrganizationPage() {
 
           {/* AI 추천 미리보기 */}
           {aiLoading && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-400">
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm text-primary">
               <Loader2 className="h-4 w-4 animate-spin" />
               AI가 {org.industry} 산업 맞춤 KPI를 분석 중입니다...
             </div>
           )}
           {!aiLoading && aiPreview && (
-            <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800 dark:bg-violet-950">
-              <p className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-violet-700 dark:text-violet-400">
+            <div className="mt-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+              <p className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-carbon-success">
                 <Sparkles className="h-3 w-3" /> AI 추천 KPI 미리보기 ({org.industry})
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {aiPreview.map((kpi) => (
                   <span
                     key={kpi}
-                    className="rounded-full border border-violet-200 bg-white px-2.5 py-0.5 text-xs text-violet-700 dark:border-violet-700 dark:bg-violet-900 dark:text-violet-300"
+                    className="rounded-full border border-primary/30 bg-card px-2.5 py-0.5 text-xs text-primary"
                   >
                     {kpi}
                   </span>
                 ))}
-                <span className="rounded-full border border-violet-200 bg-white px-2.5 py-0.5 text-xs text-muted-foreground dark:border-violet-700 dark:bg-violet-900">
+                <span className="rounded-full border border-primary/30 bg-card px-2.5 py-0.5 text-xs text-muted-foreground">
                   +더보기 (④ KPI 단계에서 확인)
                 </span>
               </div>

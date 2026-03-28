@@ -229,7 +229,7 @@ export function Scope3MonthlyInput({ categories }: Scope3MonthlyInputProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">데이터 상태</span>
-                      <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900">Draft</span>
+                      <span className="inline-flex items-center rounded-full border border-border bg-taupe-50 px-2 py-0.5 text-[11px] font-medium text-carbon-warning">Draft</span>
                     </div>
                   </div>
                 ) : (
@@ -422,7 +422,7 @@ export function Scope3MonthlyInput({ categories }: Scope3MonthlyInputProps) {
                 <Button onClick={handleSave}>저장</Button>
                 <span className="text-sm text-muted-foreground">
                   {saved ? "저장되었습니다." : (
-                    <>{year}년 데이터는{" "}<span className="font-semibold text-amber-600">Draft</span>{" "}상태입니다.</>
+                    <>{year}년 데이터는{" "}<span className="font-semibold text-carbon-warning">Draft</span>{" "}상태입니다.</>
                   )}
                 </span>
               </div>

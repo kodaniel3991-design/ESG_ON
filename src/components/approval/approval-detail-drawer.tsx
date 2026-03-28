@@ -189,8 +189,8 @@ export function ApprovalDetailDrawer({
 
           {/* 7) Lock 상태 */}
           {detail.isLocked && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-              <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+            <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-taupe-50/10 p-3 text-sm">
+              <Lock className="h-4 w-4 shrink-0 text-carbon-warning" />
               <p>
                 이 데이터는 최종 확정되어 수정이 잠겨 있습니다. 재수정이 필요한 경우
                 Reopen 요청이 필요합니다.

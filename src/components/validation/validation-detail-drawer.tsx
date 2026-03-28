@@ -107,7 +107,7 @@ export function ValidationDetailDrawer({
                         </td>
                         <td className="px-2 py-1.5 text-center">
                           {m.isAnomaly ? (
-                            <span className="text-amber-600">●</span>
+                            <span className="text-carbon-warning">●</span>
                           ) : (
                             "-"
                           )}
@@ -169,8 +169,8 @@ export function ValidationDetailDrawer({
 
           {/* 6) AI 검증 결과 */}
           {detail.aiResultText && (
-            <div className="rounded-lg bg-violet-500/10 p-3 text-sm">
-              <p className="mb-1 font-medium text-violet-700 dark:text-violet-300">
+            <div className="rounded-lg bg-primary/10 p-3 text-sm">
+              <p className="mb-1 font-medium text-primary">
                 AI 검증 결과
               </p>
               <p className="text-muted-foreground">{detail.aiResultText}</p>

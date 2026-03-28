@@ -72,14 +72,14 @@ export function EnvironmentKpiCards({ items }: EnvironmentKpiCardsProps) {
         return (
           <Card
             key={item.id}
-            className="overflow-hidden transition-shadow hover:shadow-md border-border/80"
+            className="overflow-hidden border-border/80 transition-all hover:shadow-md hover:-translate-y-0.5"
           >
             <CardContent className="p-4">
               {/* 상단: 아이콘 + 변화율 배지 */}
               <div className="flex items-center justify-between">
                 <div
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg",
+                    "flex h-11 w-11 items-center justify-center rounded-[10px]",
                     meta.iconBg
                   )}
                 >
@@ -92,7 +92,7 @@ export function EnvironmentKpiCards({ items }: EnvironmentKpiCardsProps) {
                       item.changePercent > 0
                         ? "bg-green-50 text-carbon-success"
                         : item.changePercent < 0
-                          ? "bg-red-50 text-carbon-danger"
+                          ? "bg-destructive/10 text-carbon-danger"
                           : "bg-muted text-muted-foreground"
                     )}
                   >
@@ -113,7 +113,7 @@ export function EnvironmentKpiCards({ items }: EnvironmentKpiCardsProps) {
 
               {/* 값 */}
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold tracking-tight text-foreground">
+                <span className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground">
                   {typeof item.value === "number"
                     ? item.value.toLocaleString("ko-KR")
                     : item.value}

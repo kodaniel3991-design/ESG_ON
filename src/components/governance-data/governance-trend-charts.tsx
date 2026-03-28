@@ -16,10 +16,10 @@ import type { GovernanceTrendPoint } from "@/types/governance-data";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_COLORS = {
-  board: "hsl(262 83% 58%)",
-  ethics: "hsl(142 76% 36%)",
-  compliance: "hsl(200 80% 45%)",
-  audit: "hsl(25 95% 53%)",
+  board: "hsl(var(--taupe-400))",
+  ethics: "hsl(var(--carbon-success))",
+  compliance: "hsl(var(--green-500))",
+  audit: "hsl(var(--taupe-300))",
 };
 
 type PeriodTab = "monthly" | "quarterly" | "yearly";

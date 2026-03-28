@@ -25,7 +25,7 @@ interface SupplierPortalAnalyticsProps {
   responseTrend: ResponseTrendPoint[];
 }
 
-const RISK_COLORS = ["hsl(142 76% 36%)", "hsl(38 92% 50%)", "hsl(25 95% 53%)", "hsl(0 84% 60%)"];
+const RISK_COLORS = ["hsl(var(--carbon-success))", "hsl(var(--carbon-warning))", "hsl(var(--taupe-300))", "hsl(var(--carbon-danger))"];
 
 /** 네트워크 현황 분석 - 4개 차트 */
 export function SupplierPortalAnalytics({
@@ -101,7 +101,7 @@ export function SupplierPortalAnalytics({
                 <Bar
                   dataKey="count"
                   name="협력사 수"
-                  fill="hsl(217 91% 60%)"
+                  fill="hsl(var(--primary))"
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>
@@ -195,7 +195,7 @@ export function SupplierPortalAnalytics({
                   type="monotone"
                   dataKey="invited"
                   name="초대"
-                  stroke="hsl(217 91% 60%)"
+                  stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -203,7 +203,7 @@ export function SupplierPortalAnalytics({
                   type="monotone"
                   dataKey="responded"
                   name="응답"
-                  stroke="hsl(142 76% 36%)"
+                  stroke="hsl(var(--carbon-success))"
                   strokeWidth={2}
                   dot={false}
                 />

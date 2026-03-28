@@ -14,7 +14,7 @@ const iconMap = {
 
 const iconColorMap = {
   anomaly: "text-carbon-danger",
-  recommendation: "text-amber-500",
+  recommendation: "text-carbon-warning",
   report: "text-carbon-success",
 };
 

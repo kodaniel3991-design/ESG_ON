@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Bell, ChevronDown, LogOut, Search } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Moon, Search, Sun } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 export function TopHeader() {
   const router = useRouter();
   const { collapsed } = useSidebar();
+  const { theme, setTheme } = useTheme();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -46,6 +48,16 @@ export function TopHeader() {
           <span className="h-2 w-2 rounded-full bg-primary" />
           환경부 API 연동 중
         </div>
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+          aria-label="테마 전환"
+        >
+          <Sun className="h-3.5 w-3.5 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0 dark:absolute" />
+          <Moon className="h-3.5 w-3.5 absolute rotate-90 scale-0 transition-transform dark:relative dark:rotate-0 dark:scale-100" />
+          <span className="dark:hidden">Light Mode</span>
+          <span className="hidden dark:inline">Dark Mode</span>
+        </button>
         <Button variant="ghost" size="icon" className="relative" aria-label="알림">
           <Bell className="h-4 w-4" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />

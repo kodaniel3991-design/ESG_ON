@@ -36,7 +36,7 @@ export function ValidationAiInsight({ data }: ValidationAiInsightProps) {
       <CardContent className="grid gap-4 sm:grid-cols-3 text-sm">
         <div>
           <p className="mb-1.5 flex items-center gap-1.5 font-medium text-foreground">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTriangle className="h-4 w-4 text-carbon-warning" />
             주요 경고
           </p>
           <ul className="list-inside list-disc space-y-0.5 text-muted-foreground">

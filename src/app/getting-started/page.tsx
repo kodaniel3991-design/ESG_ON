@@ -45,18 +45,18 @@ export default function GettingStartedPage() {
     <div className="flex flex-col gap-4">
       {/* 완료 배너 */}
       {allDone && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950">
+        <div className="rounded-xl border border-border bg-green-50 p-4">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            <CheckCircle2 className="h-6 w-6 text-carbon-success" />
             <div>
-              <p className="font-semibold text-emerald-800 dark:text-emerald-300">초기 설정 완료!</p>
-              <p className="text-sm text-emerald-700 dark:text-emerald-400">
+              <p className="font-semibold text-foreground">초기 설정 완료!</p>
+              <p className="text-sm text-muted-foreground">
                 모든 설정이 완료됐습니다. 대시보드에서 ESG 현황을 확인하세요.
               </p>
             </div>
             <Link
               href="/dashboard"
-              className="ml-auto flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+              className="ml-auto flex items-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               대시보드로 <ArrowRight className="h-4 w-4" />
             </Link>
@@ -76,7 +76,7 @@ export default function GettingStartedPage() {
               className={cn(
                 "group flex flex-col gap-3 rounded-xl border p-5 transition-all hover:shadow-md",
                 done
-                  ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30"
+                  ? "border-border bg-green-50/50"
                   : isNext
                   ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
                   : "border-border bg-card hover:border-primary/30"
@@ -88,7 +88,7 @@ export default function GettingStartedPage() {
                     className={cn(
                       "flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold",
                       done
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-400"
+                        ? "bg-green-50 text-carbon-success"
                         : isNext
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
@@ -107,11 +107,11 @@ export default function GettingStartedPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 {STEP_DESCRIPTIONS[s.step]}
               </p>
               {(s.step === 1 || s.step === 4 || s.step === 5) && (
-                <div className="flex items-center gap-1 text-[11px] font-medium text-violet-600 dark:text-violet-400">
+                <div className="flex items-center gap-1 text-[11px] font-medium text-carbon-success">
                   <Sparkles className="h-3 w-3" />
                   AI 자동 추천 포함
                 </div>

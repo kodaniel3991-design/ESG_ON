@@ -18,16 +18,16 @@ interface ActionFooterProps {
 const STATUS_CONFIG: Record<DataStatus, { label: string; className: string; icon?: React.ElementType }> = {
   draft: {
     label: "Draft",
-    className: "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+    className: "border-border bg-taupe-50 text-carbon-warning dark:border-border dark:bg-taupe-50/40 dark:text-carbon-warning",
   },
   reviewing: {
     label: "검토 중",
-    className: "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+    className: "border-primary/30 bg-primary/10 text-primary",
     icon: Clock,
   },
   confirmed: {
     label: "확정됨",
-    className: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    className: "border-border bg-green-50 text-carbon-success dark:border-border dark:text-carbon-success",
     icon: CheckCircle2,
   },
 };
@@ -58,7 +58,7 @@ export function ActionFooter({ year, status, hasErrors, onRequestValidation, onS
           {cfg.label}
         </span>
         {hasErrors && (
-          <span className="text-red-600 dark:text-red-400">— 오류를 먼저 수정해 주세요</span>
+          <span className="text-carbon-danger">— 오류를 먼저 수정해 주세요</span>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +97,7 @@ export function ActionFooter({ year, status, hasErrors, onRequestValidation, onS
         {/* 저장: confirmed가 아닐 때 활성 */}
         <Button
           size="sm"
-          className="bg-emerald-600 text-emerald-50 hover:bg-emerald-700 disabled:opacity-50"
+          className="bg-carbon-success text-carbon-success hover:bg-green-50 disabled:opacity-50"
           disabled={isSaving || status === "confirmed"}
           onClick={handleSave}
           title={status === "confirmed" ? "확정된 데이터는 수정할 수 없습니다" : undefined}

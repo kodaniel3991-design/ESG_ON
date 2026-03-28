@@ -16,10 +16,10 @@ import type { SocialTrendPoint } from "@/types/social-data";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_COLORS = {
-  humanRights: "hsl(262 83% 58%)",
-  labor: "hsl(200 80% 45%)",
-  safety: "hsl(142 76% 36%)",
-  community: "hsl(25 95% 53%)",
+  humanRights: "hsl(var(--taupe-400))",
+  labor: "hsl(var(--carbon-success))",
+  safety: "hsl(var(--green-500))",
+  community: "hsl(var(--taupe-300))",
 };
 
 type PeriodTab = "monthly" | "quarterly" | "yearly";

@@ -15,21 +15,21 @@ export function SupplierPortalInsightPanel({
   data,
 }: SupplierPortalInsightPanelProps) {
   return (
-    <Card className="border-blue-500/20 bg-blue-500/5 shadow-sm">
+    <Card className="border-primary/30 bg-primary/5 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Network className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <Network className="h-5 w-5 text-primary" />
             <h3 className="text-base font-semibold">공급망 네트워크 인사이트</h3>
-            <Badge variant="secondary" className="text-xs bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30">
+            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/30">
               {data.badgeLabel}
             </Badge>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="border-blue-500/30">
+            <Button variant="outline" size="sm" className="border-primary/30">
               미응답만 보기
             </Button>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+            <Button size="sm" className="bg-primary hover:bg-primary/10">
               High Risk만 보기
             </Button>
           </div>

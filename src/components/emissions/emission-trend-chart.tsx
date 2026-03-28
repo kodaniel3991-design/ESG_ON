@@ -13,9 +13,9 @@ import {
 import type { ChartDataPoint } from "@/types";
 
 const SCOPE_COLORS = {
-  scope1: "hsl(142 76% 36%)",
-  scope2: "hsl(200 80% 45%)",
-  scope3: "hsl(280 60% 50%)",
+  scope1: "hsl(var(--taupe-400))",
+  scope2: "hsl(var(--carbon-success))",
+  scope3: "hsl(var(--taupe-300))",
 };
 
 interface EmissionTrendChartProps {

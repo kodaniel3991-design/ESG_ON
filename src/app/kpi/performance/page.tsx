@@ -237,10 +237,10 @@ export default function KpiPerformancePage() {
                                     achievement === "—"
                                       ? "text-muted-foreground"
                                       : parseFloat(achievement) >= 90
-                                      ? "text-green-600"
+                                      ? "text-carbon-success"
                                       : parseFloat(achievement) >= 70
                                       ? "text-yellow-600"
-                                      : "text-red-500"
+                                      : "text-carbon-danger"
                                   }
                                 >
                                   {achievement}

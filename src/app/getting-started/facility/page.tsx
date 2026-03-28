@@ -255,7 +255,7 @@ function FacilityCard({
         {/* 에너지 사용 — 탭 방식 */}
         <div className="flex flex-col gap-1.5">
           <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Zap className="h-3.5 w-3.5 text-amber-500" /> 에너지 사용 (복수 선택)
+            <Zap className="h-3.5 w-3.5 text-carbon-warning" /> 에너지 사용 (복수 선택)
           </label>
           <div className="rounded-lg border border-border bg-muted/20">
             {/* 탭 헤더 */}
@@ -308,7 +308,7 @@ function FacilityCard({
                         {selected && tab.scope && (
                           <span className={cn(
                             "rounded-full px-1 text-[9px] font-bold",
-                            tab.scope === "S2" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
+                            tab.scope === "S2" ? "bg-green-50 text-carbon-success" : "bg-taupe-50 text-taupe-400"
                           )}>
                             {tab.scope}
                           </span>
@@ -389,7 +389,7 @@ export default function FacilityPage() {
             본사·공장·물류센터 등 여러 사업장을 모두 등록할 수 있습니다.
           </p>
         </div>
-        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300">
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
             <strong>에너지 유형 → Scope 자동 연결:</strong>&nbsp;

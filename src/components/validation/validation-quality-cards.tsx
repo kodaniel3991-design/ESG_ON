@@ -10,9 +10,9 @@ interface ValidationQualityCardsProps {
 }
 
 function getScoreColor(value: number): string {
-  if (value >= 90) return "text-green-600 dark:text-green-400";
-  if (value >= 70) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
+  if (value >= 90) return "text-carbon-success dark:text-carbon-success";
+  if (value >= 70) return "text-carbon-warning dark:text-carbon-warning";
+  return "text-carbon-danger";
 }
 
 /** 검증 품질 카드 - Environment Data Quality 카드 구조 재사용 */

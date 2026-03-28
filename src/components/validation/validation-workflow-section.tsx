@@ -30,7 +30,7 @@ export function ValidationWorkflowSection({
                 className={cn(
                   "flex flex-col rounded-lg border px-4 py-3 min-w-[100px]",
                   index === 1
-                    ? "border-amber-500/40 bg-amber-500/5"
+                    ? "border-border/40 bg-taupe-50/5"
                     : "border-border bg-muted/30"
                 )}
               >

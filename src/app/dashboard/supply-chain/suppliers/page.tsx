@@ -49,7 +49,7 @@ export default function SupplierPortalPage() {
       <PageHeader
         title={
           <span className="flex items-center gap-2">
-            <Network className="h-6 w-6 text-blue-600 dark:text-blue-400" aria-hidden />
+            <Network className="h-6 w-6 text-primary" aria-hidden />
             협력사 관리
           </span>
         }
@@ -57,11 +57,11 @@ export default function SupplierPortalPage() {
       >
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+            <Button size="sm" className="bg-primary hover:bg-primary/10">
               <UserPlus className="mr-1.5 h-4 w-4" />
               협력사 초대
             </Button>
-            <Button variant="outline" size="sm" className="border-blue-500/30">
+            <Button variant="outline" size="sm" className="border-primary/30">
               <Send className="mr-1.5 h-4 w-4" />
               리마인드 발송
             </Button>

@@ -6,15 +6,15 @@ import type { SubmissionStatus } from "@/types/supplier-portal";
 const CONFIG: Record<SubmissionStatus, { label: string; className: string }> = {
   verified: {
     label: "검증완료",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+    className: "bg-green-500/15 text-green-700 dark:text-carbon-success border-green-500/30",
   },
   submitted: {
     label: "제출중",
-    className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    className: "bg-primary/10 text-primary border-primary/30",
   },
   in_progress: {
     label: "진행중",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
   not_started: {
     label: "미시작",
@@ -22,7 +22,7 @@ const CONFIG: Record<SubmissionStatus, { label: string; className: string }> = {
   },
   overdue: {
     label: "기한초과",
-    className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+    className: "bg-carbon-danger/15 text-red-700 border-red-500/30",
   },
 };
 

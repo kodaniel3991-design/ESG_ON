@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { DashboardKpiItem, DashboardKpiStatus } from "@/types";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { memo } from "react";
 
 const statusConfig: Record<
@@ -26,46 +26,57 @@ function DashboardKpiCardComponent({ item, className }: DashboardKpiCardProps) {
   return (
     <Card
       className={cn(
-        "flex flex-col overflow-hidden bg-card box-border",
+        "overflow-hidden border-border/80 transition-all hover:shadow-md hover:-translate-y-0.5",
         className
       )}
-      style={{ height: "7rem", minHeight: "7rem", maxHeight: "7rem" }}
     >
-      <CardHeader className="shrink-0 p-3 pb-0">
-        <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
-            {item.label}
-          </p>
-          {status && (
-            <Badge variant={status.variant} className="shrink-0 text-xs">
-              {status.label}
-            </Badge>
-          )}
+      <CardContent className="p-4">
+        {/* 상단: 아이콘 + 배지 */}
+        <div className="flex items-center justify-between">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-navy-50 text-navy-500">
+            <BarChart3 className="h-5 w-5" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            {status && (
+              <Badge variant={status.variant} className="shrink-0 text-[10px]">
+                {status.label}
+              </Badge>
+            )}
+            {item.trendText && (
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                  isTrendUp ? "bg-green-50 text-carbon-success" : "bg-destructive/10 text-carbon-danger"
+                )}
+              >
+                {isTrendUp ? "↑" : "↓"} {item.trendText}
+              </span>
+            )}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 pt-1">
-        <div className="flex min-h-0 flex-col gap-0.5 overflow-hidden">
-          <span className="truncate text-xl font-semibold tracking-tight">
+
+        {/* 라벨 */}
+        <p className="mt-3 line-clamp-1 text-xs font-medium text-muted-foreground">
+          {item.label}
+        </p>
+
+        {/* 값 */}
+        <div className="mt-1 flex items-baseline gap-1.5">
+          <span className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground">
             {item.value}
           </span>
-          {item.subLabel && (
-            <p className="line-clamp-1 text-xs text-muted-foreground">
-              {item.subLabel}
-            </p>
-          )}
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-1 text-xs font-medium",
-              isTrendUp ? "text-carbon-success" : "text-carbon-danger"
-            )}
-          >
-            {isTrendUp ? (
-              <TrendingUp className="h-3.5 w-3.5 shrink-0" />
-            ) : (
-              <TrendingDown className="h-3.5 w-3.5 shrink-0" />
-            )}
-            <span className="truncate">{item.trendText}</span>
-          </div>
+        </div>
+
+        {/* 보조 텍스트 */}
+        {item.subLabel && (
+          <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
+            {item.subLabel}
+          </p>
+        )}
+
+        {/* 악센트 바 */}
+        <div className="mt-3 h-1 w-full rounded-full bg-muted">
+          <div className="h-full rounded-full bg-navy-500" style={{ width: "60%" }} />
         </div>
       </CardContent>
     </Card>

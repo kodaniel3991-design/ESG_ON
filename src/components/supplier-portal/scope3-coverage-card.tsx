@@ -13,15 +13,15 @@ interface Scope3CoverageCardProps {
 /** Scope 3 커버리지 요약 카드 */
 export function Scope3CoverageCard({ items }: Scope3CoverageCardProps) {
   return (
-    <Card className="border-blue-500/20">
+    <Card className="border-primary/30">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <BarChart3 className="h-5 w-5 text-primary" />
             <h3 className="text-sm font-semibold">Scope 3 커버리지</h3>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="border-blue-500/30 text-xs">
+            <Button variant="outline" size="sm" className="border-primary/30 text-xs">
               커버리지 상세 보기
             </Button>
             <Button variant="ghost" size="sm" className="text-xs">

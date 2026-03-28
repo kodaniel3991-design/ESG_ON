@@ -31,7 +31,7 @@ export function ApprovalWorkflowSection({
                 className={cn(
                   "flex flex-col rounded-lg border px-4 py-3 min-w-[100px]",
                   index === bottleneckIndex
-                    ? "border-amber-500/40 bg-amber-500/5"
+                    ? "border-border/40 bg-taupe-50/5"
                     : "border-border bg-muted/30"
                 )}
               >
@@ -59,14 +59,14 @@ export function ApprovalWorkflowSection({
               key={step.id}
               className={cn(
                 "h-2 flex-1 overflow-hidden rounded-full",
-                index === bottleneckIndex ? "bg-amber-500/20" : "bg-muted"
+                index === bottleneckIndex ? "bg-taupe-50/20" : "bg-muted"
               )}
               title={`${step.label}: ${step.count}`}
             >
               <div
                 className={cn(
                   "h-full rounded-full transition-all",
-                  index === bottleneckIndex ? "bg-amber-500" : "bg-primary/70"
+                  index === bottleneckIndex ? "bg-taupe-50" : "bg-primary/70"
                 )}
                 style={{ width: `${(step.count / maxCount) * 100}%` }}
               />

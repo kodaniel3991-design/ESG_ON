@@ -128,8 +128,8 @@ export function EmissionTrendCard({ monthlyTotals, label = "Scope 1" }: Emission
         {/* 범례 + 합계 */}
         <div className="mt-1 flex items-center justify-between px-1 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 bg-white" />
-            <span className="font-medium text-emerald-700">{label}</span>
+            <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-border bg-card" />
+            <span className="font-medium text-carbon-success">{label}</span>
           </div>
           <span>
             연간 합계:{" "}

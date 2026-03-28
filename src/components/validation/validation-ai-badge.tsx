@@ -9,15 +9,15 @@ const AI_CONFIG: Record<
 > = {
   normal: {
     label: "정상",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+    className: "bg-green-500/15 text-green-700 dark:text-carbon-success border-green-500/30",
   },
   anomaly: {
     label: "이상치",
-    className: "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30",
+    className: "bg-primary/10 text-primary border-primary/30",
   },
   missing_risk: {
     label: "누락 가능성",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
 };
 

@@ -49,7 +49,7 @@ export default function FrameworkPage() {
         <p className="text-sm text-muted-foreground">
           공시 프레임워크를 선택하면 KPI가 자동 매핑됩니다.
           {aiRec && (
-            <span className="ml-2 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+            <span className="ml-2 inline-flex items-center gap-1 text-carbon-success">
               <Sparkles className="h-3 w-3" />
               {organization.industry} 산업 AI 추천 포함
             </span>
@@ -70,7 +70,7 @@ export default function FrameworkPage() {
                 selected
                   ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                   : recommended
-                  ? "border-violet-300 bg-violet-50/50 dark:border-violet-700 dark:bg-violet-950/20"
+                  ? "border-secondary bg-secondary/10"
                   : "border-border hover:border-primary/30"
               )}
             >
@@ -88,7 +88,7 @@ export default function FrameworkPage() {
                   {fw.id}
                 </span>
                 {recommended && (
-                  <span className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400">
+                  <span className="flex items-center gap-0.5 text-[10px] font-semibold text-carbon-success">
                     <Sparkles className="h-3 w-3" /> AI 추천
                   </span>
                 )}
@@ -106,8 +106,8 @@ export default function FrameworkPage() {
 
       {/* KPI 자동 매핑 미리보기 */}
       {framework.selected.length > 0 && uniqueMapped.length > 0 && (
-        <div className="mt-5 rounded-xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-800 dark:bg-violet-950">
-          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-violet-700 dark:text-violet-400">
+        <div className="mt-5 rounded-xl border border-primary/30 bg-primary/10 p-4">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-carbon-success">
             <Sparkles className="h-4 w-4" />
             자동 매핑된 KPI 미리보기
           </p>
@@ -115,7 +115,7 @@ export default function FrameworkPage() {
             {uniqueMapped.map((k) => (
               <span
                 key={k}
-                className="rounded-full border border-violet-200 bg-white px-2.5 py-0.5 text-xs text-violet-700 dark:border-violet-700 dark:bg-violet-900 dark:text-violet-300"
+                className="rounded-full border border-primary/30 bg-card px-2.5 py-0.5 text-xs text-primary"
               >
                 {k}
               </span>

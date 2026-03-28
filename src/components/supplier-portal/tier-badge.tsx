@@ -6,7 +6,7 @@ import type { SupplierTier } from "@/types/supplier-portal";
 const CONFIG: Record<SupplierTier, { label: string; className: string }> = {
   strategic: {
     label: "Strategic",
-    className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    className: "bg-primary/10 text-primary border-primary/30",
   },
   core: {
     label: "Core",

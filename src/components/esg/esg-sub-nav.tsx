@@ -7,6 +7,7 @@ const items: SubNavItem[] = [
   { href: "/data/esg/environment", label: "(E)환경 데이터" },
   { href: "/data/esg/social", label: "(S)사회 데이터" },
   { href: "/data/esg/governance", label: "(G)거버넌스 데이터" },
+  { href: "/data/esg/kpi-mapping", label: "KPI ↔ 데이터 매핑" },
 ];
 
 export function EsgSubNav() {

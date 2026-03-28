@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   LineChart,
@@ -17,9 +16,9 @@ import type { ChartDataPoint } from "@/types";
 import { ChartShell } from "@/components/common/chart-shell";
 
 const CHART_COLORS = {
-  scope1: "hsl(142 76% 36%)",
-  scope2: "hsl(200 80% 45%)",
-  scope3: "hsl(25 95% 53%)",
+  scope1: "hsl(var(--taupe-400))",
+  scope2: "hsl(var(--carbon-success))",
+  scope3: "hsl(var(--taupe-300))",
 };
 
 interface CarbonFootprintChartProps {
@@ -31,12 +30,10 @@ interface CarbonFootprintChartProps {
 
 export function CarbonFootprintChart({
   data,
-  totalLabel,
   isLoading,
   fillHeight,
 }: CarbonFootprintChartProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
-  const title = `${totalLabel} — Scope 1-2-3 월별 추이`;
 
   const scope1Data = data.map((d) => ({ ...d, value: d.scope1 as number }));
   const scope2Data = data.map((d) => ({ ...d, value: d.scope2 as number }));
@@ -49,7 +46,7 @@ export function CarbonFootprintChart({
 
   return (
     <ChartShell
-      title={title}
+      title=""
       isLoading={isLoading}
       isEmpty={!data || data.length === 0}
       fillHeight={fillHeight}
@@ -78,20 +75,17 @@ export function CarbonFootprintChart({
             {activeTab === "s1" ? (
               <LineChart
                 data={scope1Data}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                margin={{ top: 5, right: 20, left: 5, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
+                  interval={0}
                 />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
+                <YAxis hide />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
@@ -106,25 +100,25 @@ export function CarbonFootprintChart({
                   stroke={CHART_COLORS.scope1}
                   strokeWidth={2}
                   dot={{ r: 3 }}
+                  isAnimationActive
+                  animationDuration={1200}
+                  animationEasing="ease-out"
                 />
               </LineChart>
             ) : activeTab === "s2" ? (
               <LineChart
                 data={scope2Data}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                margin={{ top: 5, right: 20, left: 5, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
+                  interval={0}
                 />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
+                <YAxis hide />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
@@ -139,25 +133,25 @@ export function CarbonFootprintChart({
                   stroke={CHART_COLORS.scope2}
                   strokeWidth={2}
                   dot={{ r: 3 }}
+                  isAnimationActive
+                  animationDuration={1200}
+                  animationEasing="ease-out"
                 />
               </LineChart>
             ) : (
               <LineChart
                 data={allData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                margin={{ top: 5, right: 20, left: 5, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
+                  interval={0}
                 />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
+                <YAxis hide />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
@@ -165,7 +159,7 @@ export function CarbonFootprintChart({
                     borderRadius: "var(--radius)",
                   }}
                 />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Line
                   type="monotone"
                   dataKey="scope1"
@@ -173,6 +167,9 @@ export function CarbonFootprintChart({
                   stroke={CHART_COLORS.scope1}
                   strokeWidth={2}
                   dot={{ r: 3 }}
+                  isAnimationActive
+                  animationDuration={1200}
+                  animationEasing="ease-out"
                 />
                 <Line
                   type="monotone"
@@ -181,6 +178,9 @@ export function CarbonFootprintChart({
                   stroke={CHART_COLORS.scope2}
                   strokeWidth={2}
                   dot={{ r: 3 }}
+                  isAnimationActive
+                  animationDuration={1200}
+                  animationEasing="ease-out"
                 />
                 <Line
                   type="monotone"
@@ -189,6 +189,9 @@ export function CarbonFootprintChart({
                   stroke={CHART_COLORS.scope3}
                   strokeWidth={2}
                   dot={{ r: 3 }}
+                  isAnimationActive
+                  animationDuration={1200}
+                  animationEasing="ease-out"
                 />
               </LineChart>
             )}

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { TrendingUp, TrendingDown, ArrowRight, CircleDot } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRight, CircleDot, Leaf, Database, Target, Network } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CarbonFootprintChart = dynamic(
@@ -23,7 +23,7 @@ function fmt(n: number) {
 function TrendBadge({ dir, value }: { dir?: string; value?: string }) {
   const up = dir === "up";
   return (
-    <span className={cn("flex items-center gap-0.5 text-xs font-medium", up ? "text-destructive" : "text-emerald-600")}>
+    <span className={cn("flex items-center gap-0.5 text-xs font-medium", up ? "text-destructive" : "text-carbon-success")}>
       {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       {value}
     </span>
@@ -59,7 +59,7 @@ function ScopeCard({
         <TrendBadge dir={trend} value={`${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`} />
       </div>
       <div className="h-1 w-full rounded-full bg-muted">
-        <div className="h-1 rounded-full" style={{ width: `${Math.min(pct * 10 + 50, 100)}%`, background: color }} />
+        <div className="h-1 rounded-full animate-bar" style={{ width: `${Math.min(pct * 10 + 50, 100)}%`, background: color }} />
       </div>
     </div>
   );
@@ -84,7 +84,7 @@ function DataSummaryTable({ data }: { data: { scope: string; rate: number; pendi
           {data.map((row) => (
             <tr key={row.scope}>
               <td className="py-1.5 font-medium">{row.scope}</td>
-              <td className="py-1.5 text-right font-semibold text-emerald-600">{row.rate}%</td>
+              <td className="py-1.5 text-right font-semibold text-carbon-success">{row.rate}%</td>
               <td className="py-1.5 text-right text-muted-foreground">{row.pending > 0 ? row.pending : "–"}</td>
               <td className="py-1.5 text-right text-muted-foreground">{row.needed > 0 ? row.needed : "–"}</td>
               <td className="py-1.5 text-right text-muted-foreground">{row.rate > 0 ? Math.round(row.rate / 5) : 0}</td>
@@ -121,7 +121,7 @@ function SupplyChainCard({
             <span className="w-20 truncate text-xs text-foreground">{v.vendorName}</span>
             <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-2 rounded-full bg-primary/60"
+                className="h-2 rounded-full bg-primary/60 animate-bar"
                 style={{ width: `${(v.emissionsKg / max) * 100}%` }}
               />
             </div>
@@ -157,10 +157,10 @@ function SupplyEmissionsCard({
           const up = v.trendDirection === "up";
           return (
             <div key={v.id} className="flex items-center gap-2">
-              <CircleDot className={cn("h-3 w-3 shrink-0", up ? "text-emerald-500" : "text-muted-foreground")} />
+              <CircleDot className={cn("h-3 w-3 shrink-0", up ? "text-carbon-success" : "text-muted-foreground")} />
               <span className="flex-1 truncate text-xs text-foreground">{v.vendorName}</span>
               <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-1.5 rounded-full bg-primary/50" style={{ width: `${pct}%` }} />
+                <div className="h-1.5 rounded-full bg-primary/50 animate-bar" style={{ width: `${pct}%` }} />
               </div>
               <span className="w-12 text-right text-xs font-medium text-foreground">
                 {pct.toFixed(1)}%
@@ -207,104 +207,113 @@ export function DashboardContent() {
       {/* ── 좌측 메인 영역 ── */}
       <div className="flex min-w-0 flex-1 flex-col gap-4">
 
-        {/* ESG 현황 종합 카드 */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-semibold text-foreground">ESG 현황</span>
+        {/* ESG 현황 — Stat Cards Clean Minimal */}
+        <div className="grid grid-cols-4 gap-4 animate-fade-up">
+          {/* ESG 점수 */}
+          <div className="overflow-hidden rounded-xl border border-border/80 bg-card p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-50 text-carbon-success">
+                <Leaf className="h-5 w-5" />
+              </div>
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-carbon-success">
+                ↑ 3.5%
+              </span>
+            </div>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">ESG 점수</p>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground animate-count">82</span>
+              <span className="text-sm font-medium text-muted-foreground">점</span>
+            </div>
+            <div className="mt-2 flex gap-2 text-[10px] font-medium">
+              <span className="text-green-500">E 85</span>
+              <span className="text-taupe-400">S 76</span>
+              <span className="text-taupe-300">G 84</span>
+            </div>
+            <div className="mt-2 h-1 w-full rounded-full bg-muted">
+              <div className="h-full rounded-full bg-carbon-success animate-bar" style={{ width: "82%" }} />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-6">
-            {/* ESG 점수 도넛 */}
-            <div className="flex items-center gap-4">
-              <div className="relative flex h-20 w-20 items-center justify-center">
-                <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--muted))" strokeWidth="2.5" />
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(142,76%,36%)" strokeWidth="2.5"
-                    strokeDasharray="82 18" strokeLinecap="round" />
-                </svg>
-                <div className="text-center z-10">
-                  <div className="text-xl font-bold leading-none">82</div>
-                  <div className="text-[9px] text-muted-foreground">ESG</div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1 text-xs">
-                <span className="text-emerald-600 font-medium">E 환경 85</span>
-                <span className="text-blue-500 font-medium">S 사회 76</span>
-                <span className="text-violet-500 font-medium">G 거버넌스 84</span>
-              </div>
-            </div>
 
-            <div className="h-12 w-px bg-border" />
-
-            {/* 데이터 수집 완료율 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">데이터 수집 완료율</span>
-              {scopeLoading ? <Skeleton className="h-6 w-20" /> : (
-                <>
-                  <div className="flex items-end gap-1">
-                    <span className="text-2xl font-bold text-foreground">
-                      {totalTco2e > 0 ? "83" : "–"}
-                    </span>
-                    <span className="mb-0.5 text-sm text-muted-foreground">%</span>
-                    <TrendBadge dir="down" value="-83%" />
-                  </div>
-                  <div className="h-1.5 w-28 rounded-full bg-muted">
-                    <div className="h-1.5 rounded-full bg-primary" style={{ width: "83%" }} />
-                  </div>
-                  <span className="text-xs text-muted-foreground">57 / 69 <span className="text-emerald-600">+5.4% 증가</span></span>
-                </>
+          {/* 데이터 수집 완료율 */}
+          <div className="overflow-hidden rounded-xl border border-border/80 bg-card p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-navy-50 text-navy-500">
+                <Database className="h-5 w-5" />
+              </div>
+              {!scopeLoading && (
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-carbon-success">
+                  ↑ 5.4%
+                </span>
               )}
             </div>
-
-            <div className="h-12 w-px bg-border" />
-
-            {/* 목표 KPI 달성률 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">목표 KPI 달성률</span>
-              {kpisLoading ? <Skeleton className="h-6 w-16" /> : (
-                <div className="flex items-center gap-3">
-                  <div className="relative flex h-14 w-14 items-center justify-center">
-                    <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(221,83%,53%)" strokeWidth="3"
-                        strokeDasharray="74 26" strokeLinecap="round" />
-                    </svg>
-                    <span className="z-10 text-sm font-bold">74%</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <div className="font-semibold text-foreground">9 / 12</div>
-                    <div className="text-emerald-600">+3.2%</div>
-                  </div>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">데이터 수집 완료율</p>
+            {scopeLoading ? <Skeleton className="mt-1 h-8 w-20" /> : (
+              <>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground">{totalTco2e > 0 ? "83" : "–"}</span>
+                  <span className="text-sm font-medium text-muted-foreground">%</span>
                 </div>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">57 / 69 항목</p>
+                <div className="mt-2 h-1 w-full rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary animate-bar" style={{ width: "83%" }} />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 목표 KPI 달성률 */}
+          <div className="overflow-hidden rounded-xl border border-border/80 bg-card p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-50 text-carbon-success">
+                <Target className="h-5 w-5" />
+              </div>
+              {!kpisLoading && (
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-carbon-success">
+                  ↑ 3.2%
+                </span>
               )}
             </div>
-
-            <div className="h-12 w-px bg-border" />
-
-            {/* 참여사 감이율 */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">참여사 감이율</span>
-              <div className="flex items-center gap-3">
-                <div className="relative flex h-14 w-14 items-center justify-center">
-                  <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(25,95%,53%)" strokeWidth="3"
-                      strokeDasharray="71 29" strokeLinecap="round" />
-                  </svg>
-                  <span className="z-10 text-sm font-bold">71%</span>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">목표 KPI 달성률</p>
+            {kpisLoading ? <Skeleton className="mt-1 h-8 w-16" /> : (
+              <>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground">74</span>
+                  <span className="text-sm font-medium text-muted-foreground">%</span>
                 </div>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">9 / 12 KPI</p>
+                <div className="mt-2 h-1 w-full rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-carbon-success animate-bar" style={{ width: "74%" }} />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 참여사 감이율 */}
+          <div className="overflow-hidden rounded-xl border border-border/80 bg-card p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-taupe-50 text-carbon-warning">
+                <Network className="h-5 w-5" />
               </div>
+            </div>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">참여사 감이율</p>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="font-display text-[28px] font-bold tracking-[-0.04em] text-foreground">71</span>
+              <span className="text-sm font-medium text-muted-foreground">%</span>
+            </div>
+            <div className="mt-3 h-1 w-full rounded-full bg-muted">
+              <div className="h-full rounded-full bg-carbon-warning animate-bar" style={{ width: "71%" }} />
             </div>
           </div>
         </div>
 
         {/* Scope 1 / 2 / 3 배출량 카드 */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 animate-fade-up" style={{ animationDelay: "0.15s" }}>
           <ScopeCard
             label="Scope 1"
             tCO2e={scope1?.tCO2e ?? 8245}
             pct={1.8}
             trend="up"
-            color="hsl(142,76%,36%)"
+            color="hsl(var(--taupe-400))"
             isLoading={scopeLoading}
           />
           <ScopeCard
@@ -312,7 +321,7 @@ export function DashboardContent() {
             tCO2e={scope2?.tCO2e ?? 14287}
             pct={3.2}
             trend="up"
-            color="hsl(221,83%,53%)"
+            color="hsl(var(--carbon-success))"
             isLoading={scopeLoading}
           />
           <ScopeCard
@@ -320,13 +329,13 @@ export function DashboardContent() {
             tCO2e={scope3?.tCO2e ?? 52841}
             pct={2.4}
             trend="up"
-            color="hsl(25,95%,53%)"
+            color="hsl(var(--taupe-300))"
             isLoading={scopeLoading}
           />
         </div>
 
         {/* 주요 ESG KPI 현황 + 데이터 수집 요약 */}
-        <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+        <div className="grid grid-cols-2 gap-4 flex-1 min-h-0 animate-fade-up" style={{ animationDelay: "0.3s" }}>
           {/* KPI 현황 */}
           <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3 overflow-auto">
             <div className="flex items-center justify-between">
@@ -342,10 +351,13 @@ export function DashboardContent() {
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 {kpis.slice(0, 3).map((kpi) => (
-                  <div key={kpi.id} className="rounded-lg border border-border p-3 flex flex-col gap-1">
+                  <div key={kpi.id} className="overflow-hidden rounded-lg border border-border/80 p-3 flex flex-col gap-1 transition-all hover:shadow-md hover:-translate-y-0.5">
                     <span className="text-[10px] text-muted-foreground truncate">{kpi.label}</span>
-                    <span className="text-lg font-bold text-foreground">{kpi.value}</span>
+                    <span className="font-display text-lg font-bold tracking-[-0.04em] text-foreground">{kpi.value}</span>
                     <span className="text-[10px] text-muted-foreground">{kpi.subLabel}</span>
+                    <div className="mt-1 h-1 w-full rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-primary/60" style={{ width: "60%" }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -358,10 +370,10 @@ export function DashboardContent() {
       </div>
 
       {/* ── 우측 패널 ── */}
-      <div className="flex w-72 shrink-0 flex-col gap-4">
+      <div className="flex w-96 shrink-0 flex-col gap-4">
         {/* 합산 배출량 추이 */}
-        <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 min-h-[220px]">
-          <div className="flex items-center justify-between">
+        <div className="min-h-[220px] flex flex-col">
+          <div className="rounded-xl border border-border bg-card px-4 pt-3 pb-1 mb-1">
             <span className="text-sm font-semibold text-foreground">합산 배출량 추이</span>
           </div>
           <div className="flex-1 min-h-0">

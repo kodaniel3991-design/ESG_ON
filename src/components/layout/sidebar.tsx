@@ -27,12 +27,14 @@ import {
   ChevronRight,
   ChevronDown,
   Rocket,
+  ShieldCheck,
 } from "lucide-react";
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
   대시보드: LayoutDashboard,
   시작하기: Rocket,
   "데이터 관리": Database,
+  "데이터 검증": ShieldCheck,
   "공급망 포털": Network,
   "ESG 관리": Leaf,
   분석: BarChart3,
@@ -226,14 +228,16 @@ export function Sidebar() {
             "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
             collapsed && "justify-center px-2"
           )}
-          aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+          aria-label={collapsed ? "사이드바 펼치기 (Ctrl+B)" : "사이드바 접기 (Ctrl+B)"}
+          title={collapsed ? "펼치기 (Ctrl+B)" : "접기 (Ctrl+B)"}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4 shrink-0" />
           ) : (
             <>
               <ChevronLeft className="h-4 w-4 shrink-0" />
-              <span>접기</span>
+              <span className="flex-1">접기</span>
+              <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">Ctrl+B</kbd>
             </>
           )}
         </button>

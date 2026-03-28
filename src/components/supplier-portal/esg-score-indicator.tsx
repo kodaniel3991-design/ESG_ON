@@ -25,10 +25,10 @@ export function EsgScoreIndicator({
 
   const color =
     score >= 80
-      ? "text-green-600 dark:text-green-400"
+      ? "text-carbon-success dark:text-carbon-success"
       : score >= 60
-        ? "text-amber-600 dark:text-amber-400"
-        : "text-red-600 dark:text-red-400";
+        ? "text-carbon-warning dark:text-carbon-warning"
+        : "text-carbon-danger";
 
   return (
     <div className={cn("flex items-center gap-2 min-w-[80px]", className)}>

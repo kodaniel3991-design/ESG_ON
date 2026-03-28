@@ -92,7 +92,7 @@ export function SupplierPortalFilters() {
           className={cn(
             "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
             pendingOnly
-              ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+              ? "border-primary/30 bg-primary/10 text-primary"
               : "border-border hover:bg-muted/50"
           )}
         >
@@ -106,11 +106,11 @@ export function SupplierPortalFilters() {
           <Download className="mr-1 h-3.5 w-3.5" />
           Export
         </Button>
-        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+        <Button size="sm" className="bg-primary hover:bg-primary/10">
           <UserPlus className="mr-1 h-3.5 w-3.5" />
           협력사 초대
         </Button>
-        <Button variant="outline" size="sm" className="border-blue-500/30">
+        <Button variant="outline" size="sm" className="border-primary/30">
           <Send className="mr-1 h-3.5 w-3.5" />
           리마인드 발송
         </Button>

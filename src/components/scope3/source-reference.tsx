@@ -105,9 +105,9 @@ interface Scope3SourceReferenceProps {
 }
 
 const METHOD_STYLE: Record<string, string> = {
-  "Activity Based": "border border-emerald-100 bg-emerald-50 text-emerald-700",
+  "Activity Based": "border border-border bg-green-50 text-carbon-success",
   "Spend Based": "border border-sky-100 bg-sky-50 text-sky-700",
-  "Average Based": "border border-violet-100 bg-violet-50 text-violet-700",
+  "Average Based": "border border-primary/30 bg-primary/10 text-primary",
 };
 
 export function Scope3SourceReference({ activeCategoryId }: Scope3SourceReferenceProps) {

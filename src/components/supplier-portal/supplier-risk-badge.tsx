@@ -7,20 +7,20 @@ import { AlertTriangle } from "lucide-react";
 const CONFIG: Record<SupplierRiskLevel, { label: string; className: string; showIcon?: boolean }> = {
   low: {
     label: "Low",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+    className: "bg-green-500/15 text-green-700 dark:text-carbon-success border-green-500/30",
   },
   medium: {
     label: "Medium",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
   high: {
     label: "High",
-    className: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
     showIcon: true,
   },
   critical: {
     label: "Critical",
-    className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+    className: "bg-carbon-danger/15 text-red-700 border-red-500/30",
     showIcon: true,
   },
 };

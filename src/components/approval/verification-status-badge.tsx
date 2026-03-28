@@ -6,11 +6,11 @@ import type { VerificationStatusBadge } from "@/types/approval-data";
 const CONFIG: Record<VerificationStatusBadge, { label: string; className: string }> = {
   verified: {
     label: "Verified",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+    className: "bg-green-500/15 text-green-700 dark:text-carbon-success border-green-500/30",
   },
   needs_review: {
     label: "Needs Review",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
 };
 

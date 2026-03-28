@@ -76,12 +76,14 @@ export function ChartShell({
       aria-label={ariaLabel ?? title}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-0">
-        <div>
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          {subtitle && (
-            <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
-          )}
-        </div>
+        {title ? (
+          <div>
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            {subtitle && (
+              <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+            )}
+          </div>
+        ) : null}
         {actions}
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col p-4 pt-2">

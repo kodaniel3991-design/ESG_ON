@@ -431,7 +431,7 @@ function SourcesPanel() {
                     <span className={cn(
                       "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
                       row.active
-                        ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
+                        ? "border border-border bg-green-50 text-carbon-success"
                         : "border border-border/50 bg-muted text-muted-foreground",
                     )}>
                       {row.active ? "활성" : "비활성"}
@@ -714,9 +714,9 @@ function FactorsPanel() {
                     <td className={tdCls}>
                       <span className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-                        row.scope === 1 ? "bg-orange-50 text-orange-700 border border-orange-200" :
-                        row.scope === 2 ? "bg-blue-50 text-blue-700 border border-blue-200" :
-                        "bg-purple-50 text-purple-700 border border-purple-200",
+                        row.scope === 1 ? "bg-taupe-50 text-carbon-warning border border-border" :
+                        row.scope === 2 ? "bg-primary/10 text-primary border border-primary/30" :
+                        "bg-primary/10 text-primary border border-primary/30",
                       )}>
                         S{row.scope}
                       </span>
@@ -751,7 +751,7 @@ function FactorsPanel() {
                       <span className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
                         row.active
-                          ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
+                          ? "border border-border bg-green-50 text-carbon-success"
                           : "border border-border/50 bg-muted text-muted-foreground",
                       )}>
                         {row.active ? "활성" : "비활성"}

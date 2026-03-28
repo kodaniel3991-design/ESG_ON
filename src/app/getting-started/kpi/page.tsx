@@ -31,33 +31,33 @@ const CATEGORIES: {
     label: "환경",
     sublabel: "Environmental",
     icon: Leaf,
-    activeClass: "border-emerald-500 bg-emerald-50/60 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/30 dark:text-emerald-400",
-    badgeClass: "bg-emerald-500",
-    rowSelectedClass: "bg-emerald-50 dark:bg-emerald-950/30",
-    checkClass: "border-emerald-500 bg-emerald-500 text-white",
-    groupCellClass: "bg-emerald-50/70 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400",
+    activeClass: "border-carbon-success bg-green-50/60 text-carbon-success",
+    badgeClass: "bg-carbon-success",
+    rowSelectedClass: "bg-green-50",
+    checkClass: "border-carbon-success bg-carbon-success text-white",
+    groupCellClass: "bg-green-50/70 text-carbon-success",
   },
   {
     key: "social",
     label: "사회",
     sublabel: "Social",
     icon: Users,
-    activeClass: "border-blue-500 bg-blue-50/60 text-blue-700 dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-400",
-    badgeClass: "bg-blue-500",
-    rowSelectedClass: "bg-blue-50 dark:bg-blue-950/30",
-    checkClass: "border-blue-500 bg-blue-500 text-white",
-    groupCellClass: "bg-blue-50/70 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400",
+    activeClass: "border-primary bg-primary/10 text-primary",
+    badgeClass: "bg-primary",
+    rowSelectedClass: "bg-primary/5",
+    checkClass: "border-primary bg-primary text-white",
+    groupCellClass: "bg-primary/5 text-primary",
   },
   {
     key: "governance",
     label: "거버넌스",
     sublabel: "Governance",
     icon: Scale,
-    activeClass: "border-violet-500 bg-violet-50/60 text-violet-700 dark:border-violet-400 dark:bg-violet-950/30 dark:text-violet-400",
-    badgeClass: "bg-violet-500",
-    rowSelectedClass: "bg-violet-50 dark:bg-violet-950/30",
-    checkClass: "border-violet-500 bg-violet-500 text-white",
-    groupCellClass: "bg-violet-50/70 text-violet-700 dark:bg-violet-950/20 dark:text-violet-400",
+    activeClass: "border-taupe-300 bg-taupe-50/60 text-taupe-400",
+    badgeClass: "bg-taupe-400",
+    rowSelectedClass: "bg-taupe-50",
+    checkClass: "border-taupe-400 bg-taupe-400 text-white",
+    groupCellClass: "bg-taupe-50/70 text-taupe-400",
   },
 ];
 
@@ -165,13 +165,13 @@ export default function KpiPage() {
         <p className="text-sm text-muted-foreground">
           관리할 ESG KPI를 선택해 주세요.
           {hasFwRec && (
-            <span className="ml-2 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+            <span className="ml-2 inline-flex items-center gap-1 text-carbon-success">
               <Sparkles className="h-3 w-3" />
               선택한 공시 기준({selectedFrameworks.join(", ")}) 기반으로 자동 추천됩니다.
             </span>
           )}
           {!hasFwRec && aiRec && (
-            <span className="ml-2 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400">
+            <span className="ml-2 inline-flex items-center gap-1 text-carbon-success">
               <Sparkles className="h-3 w-3" />
               {organization.industry} 산업 AI 추천이 적용됐습니다.
             </span>
@@ -181,13 +181,13 @@ export default function KpiPage() {
 
       {/* 추천 기준 안내 배너 */}
       {hasFwRec && (
-        <div className="mb-5 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800 dark:bg-violet-950">
-          <p className="mb-1.5 text-xs font-semibold text-violet-700 dark:text-violet-400">
+        <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+          <p className="mb-1.5 text-xs font-semibold text-carbon-success">
             💡 선택한 공시 기준에서 요구하는 핵심 KPI가 자동으로 체크됩니다. 필요에 따라 추가/제거해 주세요.
           </p>
           <div className="flex flex-wrap gap-1.5">
             {selectedFrameworks.map((fw) => (
-              <span key={fw} className="rounded-full bg-violet-600 px-2.5 py-0.5 text-[10px] font-bold text-white">
+              <span key={fw} className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold text-white">
                 {fw}
               </span>
             ))}
@@ -195,8 +195,8 @@ export default function KpiPage() {
         </div>
       )}
       {!hasFwRec && aiRec && (
-        <div className="mb-5 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-800 dark:bg-violet-950">
-          <p className="text-xs font-semibold text-violet-700 dark:text-violet-400">
+        <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+          <p className="text-xs font-semibold text-carbon-success">
             💡 AI 추천 기준: {organization.industry} 산업에서 주로 보고되는 핵심 KPI가 체크됩니다.
             필요에 따라 추가/제거해 주세요.
           </p>
@@ -231,7 +231,7 @@ export default function KpiPage() {
                     </span>
                   )}
                   {recCount > 0 && (
-                    <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 dark:bg-violet-900 dark:text-violet-400">
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
                       추천 {recCount}
                     </span>
                   )}
@@ -299,7 +299,7 @@ export default function KpiPage() {
                     {/* KPI명 + 프레임워크 배지 */}
                     <td className="whitespace-nowrap px-3 py-2.5">
                       <div className="flex items-center gap-1.5">
-                        {isRec && <Sparkles className="h-3 w-3 shrink-0 text-violet-500" />}
+                        {isRec && <Sparkles className="h-3 w-3 shrink-0 text-carbon-success" />}
                         <span className={cn("font-medium", selected ? "text-foreground" : "text-foreground/80")}>
                           {item.name}
                         </span>
@@ -308,13 +308,13 @@ export default function KpiPage() {
                             {matchingFws.slice(0, 2).map((fw) => (
                               <span
                                 key={fw}
-                                className="rounded px-1 py-0.5 text-[9px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-400"
+                                className="rounded px-1 py-0.5 text-[9px] font-bold bg-primary/10 text-primary"
                               >
                                 {fw}
                               </span>
                             ))}
                             {matchingFws.length > 2 && (
-                              <span className="text-[9px] text-violet-500">+{matchingFws.length - 2}</span>
+                              <span className="text-[9px] text-carbon-success">+{matchingFws.length - 2}</span>
                             )}
                           </>
                         )}
@@ -344,7 +344,7 @@ export default function KpiPage() {
             </span>
           ))}
           {hasFwRec && (
-            <span className="text-violet-600 dark:text-violet-400">
+            <span className="text-carbon-success">
               <Sparkles className="mr-0.5 inline h-3 w-3" />
               {selectedFrameworks.join(" · ")} 기반 추천
             </span>

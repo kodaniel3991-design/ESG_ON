@@ -29,7 +29,7 @@ export function SupplierPortalDetailDrawer({
         aria-hidden
       />
       <div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col border-l border-border bg-card shadow-xl">
-        <div className="flex items-center justify-between border-b border-blue-500/20 bg-blue-500/5 p-4">
+        <div className="flex items-center justify-between border-b border-primary/30 bg-primary/5 p-4">
           <h3 className="font-semibold">협력사 상세</h3>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -158,11 +158,11 @@ export function SupplierPortalDetailDrawer({
           </div>
         </div>
         <div className="flex flex-wrap gap-2 border-t border-border p-4">
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Button size="sm" className="bg-primary hover:bg-primary/10">
             <Send className="mr-1 h-3.5 w-3.5" />
             초대 발송
           </Button>
-          <Button variant="outline" size="sm" className="border-blue-500/30">
+          <Button variant="outline" size="sm" className="border-primary/30">
             <RefreshCw className="mr-1 h-3.5 w-3.5" />
             리마인드 발송
           </Button>

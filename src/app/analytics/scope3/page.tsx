@@ -1241,7 +1241,7 @@ export default function Scope3Page() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">데이터 상태</span>
-                    <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                    <span className="inline-flex items-center rounded-full border border-border bg-taupe-50 px-2 py-0.5 text-[11px] font-medium text-carbon-warning">
                       Draft
                     </span>
                   </div>
@@ -1269,8 +1269,8 @@ export default function Scope3Page() {
 
             {/* u7: 직원 출퇴근 연동 안내 */}
             {isU7 && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-green-200 bg-green-50/60 px-3 py-2 text-xs dark:border-green-900/50 dark:bg-green-950/20">
-                <span className="shrink-0 font-semibold text-green-700 dark:text-green-400">직원명부 연동</span>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-green-200 bg-green-50/60 px-3 py-2 text-xs dark:border-green-900/50">
+                <span className="shrink-0 font-semibold text-green-700 dark:text-carbon-success">직원명부 연동</span>
                 <span className="text-muted-foreground">
                   연결 직원: <span className="font-medium text-foreground">{u7UniqueEmployeeCount}명</span>
                 </span>
@@ -1283,7 +1283,7 @@ export default function Scope3Page() {
                 <span className="text-muted-foreground">
                   선택 배출원 일 배출량: <span className="font-medium text-foreground">{(u7SelectedDailyEmission * 1000).toFixed(3)} kgCO₂e/일</span>
                 </span>
-                <span className="h-3 w-px shrink-0 bg-green-200 dark:bg-green-800" />
+                <span className="h-3 w-px shrink-0 bg-green-200" />
                 <span className="text-muted-foreground">산식: 편도거리(km) × 2 × 배출계수(tCO₂e/km) × 출근일 수</span>
                 {employeesLoading && <span className="text-muted-foreground italic">직원 데이터 로딩 중…</span>}
               </div>
@@ -1291,15 +1291,15 @@ export default function Scope3Page() {
 
             {/* 계산 근거 (u7) */}
             {isU7 && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs dark:border-blue-900/50 dark:bg-blue-950/20">
-                <span className="shrink-0 font-semibold text-blue-700 dark:text-blue-400">계산 근거</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
+                <span className="shrink-0 font-semibold text-primary">계산 근거</span>
                 <span className="shrink-0 text-muted-foreground">
                   편도거리(km)
                   <span className="mx-1.5 text-foreground">×</span>
                   2(왕복)
                   <span className="mx-1.5 text-foreground">×</span>
                   배출계수
-                  <span className="mx-1 rounded bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                  <span className="mx-1 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
                     {(u7SelectedFactorPerKm ?? 0).toExponential(4)} tCO₂e/km
                   </span>
                   <span className="mx-1.5 text-foreground">×</span>
@@ -1308,11 +1308,11 @@ export default function Scope3Page() {
                   배출량
                   <span className="ml-1 text-muted-foreground/60">(tCO₂e)</span>
                 </span>
-                <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+                <span className="h-3 w-px shrink-0 bg-primary/10" />
                 <span className="text-muted-foreground">CO₂: <span className="ml-1 font-medium text-foreground">95%</span></span>
                 <span className="text-muted-foreground">CH₄: <span className="ml-1 font-medium text-foreground">3%</span></span>
                 <span className="text-muted-foreground">N₂O: <span className="ml-1 font-medium text-foreground">2%</span></span>
-                <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+                <span className="h-3 w-px shrink-0 bg-primary/10" />
                 <span className="text-muted-foreground">
                   출처: <span className="ml-1 text-foreground">국립환경과학원 국가 온실가스 배출·흡수계수 (NIER-2023)</span>
                 </span>
@@ -1321,25 +1321,25 @@ export default function Scope3Page() {
 
             {/* 계산 근거 (u7 제외) */}
             {!isU7 && selectedActivity && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs dark:border-blue-900/50 dark:bg-blue-950/20">
-                <span className="shrink-0 font-semibold text-blue-700 dark:text-blue-400">계산 근거</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
+                <span className="shrink-0 font-semibold text-primary">계산 근거</span>
                 <span className="shrink-0 text-muted-foreground">
                   활동량
                   <span className="mx-1 text-muted-foreground/60">({selectedActivity.unit})</span>
                   <span className="mx-1.5 text-foreground">×</span>
                   배출계수
-                  <span className="mx-1 rounded bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                  <span className="mx-1 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
                     {emissionFactor.toFixed(5)} tCO₂e/{selectedActivity.unit}
                   </span>
                   <span className="mx-1.5 text-foreground">=</span>
                   배출량
                   <span className="ml-1 text-muted-foreground/60">(tCO₂e)</span>
                 </span>
-                <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+                <span className="h-3 w-px shrink-0 bg-primary/10" />
                 <span className="text-muted-foreground">CO₂: <span className="ml-1 font-medium text-foreground">95%</span></span>
                 <span className="text-muted-foreground">CH₄: <span className="ml-1 font-medium text-foreground">3%</span></span>
                 <span className="text-muted-foreground">N₂O: <span className="ml-1 font-medium text-foreground">2%</span></span>
-                <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+                <span className="h-3 w-px shrink-0 bg-primary/10" />
                 <span className="text-muted-foreground">
                   출처: <span className="ml-1 text-foreground">{selectedActivity.source ?? SCOPE3_CATEGORIES.find((c) => c.id === selectedCategoryId)?.factorSource ?? "-"}</span>
                 </span>

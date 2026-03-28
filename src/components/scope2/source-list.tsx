@@ -75,7 +75,7 @@ export function Scope2SourceList({
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
                         source.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                          ? "bg-green-50 text-carbon-success border border-border"
                           : "bg-muted text-muted-foreground border border-border/50",
                       )}
                     >

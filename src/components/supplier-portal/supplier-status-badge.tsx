@@ -6,7 +6,7 @@ import type { SupplierStatus } from "@/types/supplier-portal";
 const CONFIG: Record<SupplierStatus, { label: string; className: string }> = {
   connected: {
     label: "Connected",
-    className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    className: "bg-primary/10 text-primary border-primary/30",
   },
   invited: {
     label: "Invited",
@@ -14,7 +14,7 @@ const CONFIG: Record<SupplierStatus, { label: string; className: string }> = {
   },
   pending_response: {
     label: "Pending Response",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
   not_invited: {
     label: "Not Invited",

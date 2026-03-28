@@ -9,19 +9,19 @@ const STATUS_CONFIG: Record<
 > = {
   pending_approval: {
     label: "Pending Approval",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
   approved: {
     label: "Approved",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+    className: "bg-green-500/15 text-green-700 dark:text-carbon-success border-green-500/30",
   },
   rejected: {
     label: "Rejected",
-    className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+    className: "bg-carbon-danger/15 text-red-700 border-red-500/30",
   },
   confirmed: {
     label: "Confirmed",
-    className: "bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-600/30",
+    className: "bg-carbon-success/15 text-carbon-success dark:text-carbon-success border-border/30",
   },
   reopened: {
     label: "Reopened",

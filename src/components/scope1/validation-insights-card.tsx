@@ -142,24 +142,24 @@ const ISSUE_STYLES: Record<IssueType, {
 }> = {
   error: {
     icon: XCircle,
-    bg: "bg-red-50 dark:bg-red-950/20",
+    bg: "bg-destructive/10",
     border: "border-red-200 dark:border-red-800",
-    iconColor: "text-red-500",
-    textColor: "text-red-800 dark:text-red-300",
+    iconColor: "text-carbon-danger",
+    textColor: "text-red-800",
   },
   warning: {
     icon: AlertTriangle,
-    bg: "bg-amber-50 dark:bg-amber-950/20",
-    border: "border-amber-200 dark:border-amber-800",
-    iconColor: "text-amber-500",
-    textColor: "text-amber-800 dark:text-amber-300",
+    bg: "bg-taupe-50 dark:bg-taupe-50/20",
+    border: "border-border dark:border-border",
+    iconColor: "text-carbon-warning",
+    textColor: "text-carbon-warning dark:text-carbon-warning",
   },
   info: {
     icon: Info,
-    bg: "bg-blue-50 dark:bg-blue-950/20",
-    border: "border-blue-200 dark:border-blue-800",
-    iconColor: "text-blue-500",
-    textColor: "text-blue-800 dark:text-blue-300",
+    bg: "bg-primary/10",
+    border: "border-primary/30",
+    iconColor: "text-primary",
+    textColor: "text-primary",
   },
 };
 
@@ -182,18 +182,18 @@ export function ValidationInsightsCard({ activityByMonth, year, historicalMonthl
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold">데이터 검증</CardTitle>
           {allGood ? (
-            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            <span className="flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-[11px] font-semibold text-carbon-success dark:text-carbon-success">
               <CheckCircle2 className="h-3 w-3" /> 이상 없음
             </span>
           ) : (
             <div className="flex items-center gap-1.5">
               {errorCount > 0 && (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
                   오류 {errorCount}
                 </span>
               )}
               {warnCount > 0 && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span className="rounded-full bg-taupe-50 px-2 py-0.5 text-[11px] font-semibold text-carbon-warning dark:bg-taupe-50/30 dark:text-carbon-warning">
                   경고 {warnCount}
                 </span>
               )}
@@ -206,7 +206,7 @@ export function ValidationInsightsCard({ activityByMonth, year, historicalMonthl
       </CardHeader>
       <CardContent className="space-y-2">
         {allGood ? (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 text-xs text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-green-50/60 px-3 py-2.5 text-xs text-carbon-success dark:border-border dark:text-carbon-success">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             입력된 데이터에 이상이 없습니다. 검증 요청을 진행할 수 있습니다.
           </div>

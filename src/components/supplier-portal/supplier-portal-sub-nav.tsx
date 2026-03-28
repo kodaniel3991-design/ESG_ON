@@ -26,7 +26,7 @@ export function SupplierPortalSubNav() {
             className={cn(
               "rounded-md px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30 shadow-sm"
+                ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >

@@ -82,10 +82,17 @@ export const NAV_ITEMS: NavItem[] = [
           link("/data/esg/environment", "(E)환경 데이터"),
           link("/data/esg/social", "(S)사회 데이터"),
           link("/data/esg/governance", "(G)거버넌스 데이터"),
+          link("/data/esg/kpi-mapping", "KPI ↔ 데이터 매핑"),
         ],
       },
+    ],
+  },
+  {
+    type: "section",
+    label: "데이터 검증",
+    children: [
       {
-        label: "데이터 검증·승인",
+        label: "",
         children: [
           link("/data/verification", "데이터 검증"),
           link("/data/approval", "데이터 승인 / 확정"),
@@ -217,6 +224,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   "/data/esg/environment": "환경 데이터",
   "/data/esg/social": "사회 데이터",
   "/data/esg/governance": "거버넌스 데이터",
+  "/data/esg/kpi-mapping": "KPI ↔ 데이터 매핑",
   "/data/emissions/scope1": "Scope 1",
   "/data/emissions/scope2": "Scope 2",
   "/data/emissions/scope3": "Scope 3",

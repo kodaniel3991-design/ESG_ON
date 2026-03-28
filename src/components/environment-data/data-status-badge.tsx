@@ -9,11 +9,11 @@ const STATUS_CONFIG: Record<
 > = {
   verified: {
     label: "Verified",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+    className: "bg-green-500/15 text-green-700 dark:text-carbon-success border-green-500/30",
   },
   estimated: {
     label: "Estimated",
-    className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    className: "bg-taupe-50/15 text-carbon-warning dark:text-carbon-warning border-border/30",
   },
   pending: {
     label: "Pending",
@@ -21,11 +21,11 @@ const STATUS_CONFIG: Record<
   },
   missing: {
     label: "Missing",
-    className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+    className: "bg-carbon-danger/15 text-red-700 border-red-500/30",
   },
   ai_anomaly: {
     label: "AI anomaly",
-    className: "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30",
+    className: "bg-primary/10 text-primary border-primary/30",
   },
 };
 

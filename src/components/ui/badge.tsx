@@ -15,11 +15,11 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground",
         outline: "text-foreground",
         success:
-          "border-transparent bg-carbon-success/20 text-green-400",
+          "border-transparent bg-carbon-success/20 text-carbon-success",
         warning:
-          "border-transparent bg-carbon-warning/20 text-amber-400",
+          "border-transparent bg-carbon-warning/20 text-carbon-warning",
         danger:
-          "border-transparent bg-carbon-danger/20 text-red-400",
+          "border-transparent bg-carbon-danger/20 text-carbon-danger",
       },
     },
     defaultVariants: {

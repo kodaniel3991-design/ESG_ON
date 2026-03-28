@@ -19,7 +19,7 @@ export function SupplierPortalSummaryCards({
           key={item.id}
           className={cn(
             "transition-shadow hover:shadow-md border-border/80",
-            index === 0 && "border-blue-500/20"
+            index === 0 && "border-primary/30"
           )}
         >
           <CardContent className="p-4">
@@ -30,7 +30,7 @@ export function SupplierPortalSummaryCards({
               <span
                 className={cn(
                   "text-xl font-semibold tracking-tight",
-                  index === 0 ? "text-blue-600 dark:text-blue-400" : "text-foreground"
+                  index === 0 ? "text-primary" : "text-foreground"
                 )}
               >
                 {typeof item.value === "number"

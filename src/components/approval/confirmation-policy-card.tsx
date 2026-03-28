@@ -6,10 +6,10 @@ import { Lock } from "lucide-react";
 /** 최종 확정 정책 안내 - info card */
 export function ConfirmationPolicyCard() {
   return (
-    <Card className="border-amber-500/30 bg-amber-500/5">
+    <Card className="border-border/30 bg-taupe-50/5">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-amber-600" />
+          <Lock className="h-5 w-5 text-carbon-warning" />
           <h3 className="text-sm font-semibold">최종 확정 정책</h3>
         </div>
       </CardHeader>

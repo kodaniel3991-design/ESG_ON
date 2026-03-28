@@ -201,21 +201,21 @@ export function MonthlyActivityTable({
         </div>
 
         {/* 계산 근거 */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs dark:border-blue-900/50 dark:bg-blue-950/20">
-          <span className="shrink-0 font-semibold text-blue-700 dark:text-blue-400">계산 근거</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs">
+          <span className="shrink-0 font-semibold text-primary">계산 근거</span>
           <span className="shrink-0 text-muted-foreground">
             활동량
             <span className="mx-1 text-muted-foreground/60">({unitLabel})</span>
             <span className="mx-1.5 text-foreground">×</span>
             배출계수
-            <span className="mx-1 rounded bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+            <span className="mx-1 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
               {factor.toExponential(4)} tCO₂e/{unitLabel}
             </span>
             <span className="mx-1.5 text-foreground">=</span>
             배출량
             <span className="ml-1 text-muted-foreground/60">(tCO₂e)</span>
           </span>
-          <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+          <span className="h-3 w-px shrink-0 bg-primary/10" />
           <span className="text-muted-foreground">
             CO₂:
             <span className="ml-1 font-mono font-medium text-foreground">{gasFactors.co2.toExponential(3)} tCO₂/{unitLabel}</span>
@@ -223,14 +223,14 @@ export function MonthlyActivityTable({
           <span className="text-muted-foreground">
             CH₄:
             <span className="ml-1 font-mono font-medium text-foreground">{gasFactors.ch4.toExponential(3)} tCH₄/{unitLabel}</span>
-            <span className="ml-0.5 text-[10px] text-blue-600/70">(×{gasFactors.gwp_ch4})</span>
+            <span className="ml-0.5 text-[10px] text-primary/70">(×{gasFactors.gwp_ch4})</span>
           </span>
           <span className="text-muted-foreground">
             N₂O:
             <span className="ml-1 font-mono font-medium text-foreground">{gasFactors.n2o.toExponential(3)} tN₂O/{unitLabel}</span>
-            <span className="ml-0.5 text-[10px] text-blue-600/70">(×{gasFactors.gwp_n2o})</span>
+            <span className="ml-0.5 text-[10px] text-primary/70">(×{gasFactors.gwp_n2o})</span>
           </span>
-          <span className="h-3 w-px shrink-0 bg-blue-200 dark:bg-blue-800" />
+          <span className="h-3 w-px shrink-0 bg-primary/10" />
           <span className="text-muted-foreground">
             출처:
             <span className="ml-1 text-foreground">{factorSource}</span>
@@ -254,13 +254,13 @@ export function MonthlyActivityTable({
                         isSelected
                           ? "bg-primary/10 text-primary"
                           : isCurrent
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                          ? "bg-taupe-50 text-carbon-warning dark:bg-taupe-50/30 dark:text-carbon-warning"
                           : ""
                       )}
                     >
                       {label}
                       {isCurrent && !isSelected && (
-                        <span className="ml-0.5 inline-block h-1 w-1 rounded-full bg-amber-400 align-middle" />
+                        <span className="ml-0.5 inline-block h-1 w-1 rounded-full bg-taupe-50 align-middle" />
                       )}
                     </th>
                   );
@@ -279,7 +279,7 @@ export function MonthlyActivityTable({
                   return (
                     <td key={idx} className={cn(
                       "px-1 py-1 text-right",
-                      isSelected ? "bg-primary/5" : isCurrent ? "bg-amber-50/60 dark:bg-amber-950/10" : ""
+                      isSelected ? "bg-primary/5" : isCurrent ? "bg-taupe-50/60 dark:bg-taupe-50/10" : ""
                     )}>
                       <NumberInput
                         value={activityByMonth[idx] ?? 0}
@@ -292,7 +292,7 @@ export function MonthlyActivityTable({
                         className={cn(
                           "h-8 w-full min-w-0 rounded-md border bg-transparent px-1 py-1 text-right text-xs ring-offset-background",
                           "focus:outline-none focus:ring-1 focus:ring-ring",
-                          isSelected ? "border-primary" : isCurrent ? "border-amber-300 dark:border-amber-700" : "border-input"
+                          isSelected ? "border-primary" : isCurrent ? "border-border dark:border-border" : "border-input"
                         )}
                       />
                       {/* 첨부 버튼 */}
@@ -320,7 +320,7 @@ export function MonthlyActivityTable({
                 {emissionData.map((row, idx) => (
                   <td key={row.month} className={cn(
                     "px-2 py-2 text-right text-xs",
-                    selectedMonth === idx ? "bg-primary/5" : isCurrentYear && idx === currentMonthIdx ? "bg-amber-50/60 dark:bg-amber-950/10" : ""
+                    selectedMonth === idx ? "bg-primary/5" : isCurrentYear && idx === currentMonthIdx ? "bg-taupe-50/60 dark:bg-taupe-50/10" : ""
                   )}>
                     {formatNumber(row.emission, 2)}
                   </td>
@@ -333,7 +333,7 @@ export function MonthlyActivityTable({
               <tr className="border-b border-border/60 bg-muted/20">
                 <td className="px-3 py-2 text-xs text-muted-foreground pl-5">CO₂ (tCO₂)</td>
                 {gasEmissions.co2.map((v, idx) => (
-                  <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-amber-50/60 dark:bg-amber-950/10")}>{formatNumber(v, 3)}</td>
+                  <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-taupe-50/60 dark:bg-taupe-50/10")}>{formatNumber(v, 3)}</td>
                 ))}
                 <td className="px-3 py-2 text-right text-xs text-muted-foreground">
                   {formatNumber(gasEmissions.co2.reduce((s, v) => s + v, 0), 3)}
@@ -342,7 +342,7 @@ export function MonthlyActivityTable({
               <tr className="border-b border-border/60 bg-muted/20">
                 <td className="px-3 py-2 text-xs text-muted-foreground pl-5">CH₄ (tCH₄)</td>
                 {gasEmissions.ch4.map((v, idx) => (
-                  <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-amber-50/60 dark:bg-amber-950/10")}>{formatNumber(v, 3)}</td>
+                  <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-taupe-50/60 dark:bg-taupe-50/10")}>{formatNumber(v, 3)}</td>
                 ))}
                 <td className="px-3 py-2 text-right text-xs text-muted-foreground">
                   {formatNumber(gasEmissions.ch4.reduce((s, v) => s + v, 0), 3)}
@@ -351,7 +351,7 @@ export function MonthlyActivityTable({
               <tr className="bg-muted/20">
                 <td className="px-3 py-2 text-xs text-muted-foreground pl-5">N₂O (tN₂O)</td>
                 {gasEmissions.n2o.map((v, idx) => (
-                  <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-amber-50/60 dark:bg-amber-950/10")}>{formatNumber(v, 3)}</td>
+                  <td key={idx} className={cn("px-2 py-2 text-right text-xs text-muted-foreground", isCurrentYear && idx === currentMonthIdx && "bg-taupe-50/60 dark:bg-taupe-50/10")}>{formatNumber(v, 3)}</td>
                 ))}
                 <td className="px-3 py-2 text-right text-xs text-muted-foreground">
                   {formatNumber(gasEmissions.n2o.reduce((s, v) => s + v, 0), 3)}

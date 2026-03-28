@@ -59,8 +59,8 @@ export function SocialDetailDrawer({
             <p className="text-sm">{detail.source}</p>
           </div>
           {detail.aiAnalysis && (
-            <div className="rounded-lg bg-violet-500/10 p-3 text-sm">
-              <p className="mb-1 font-medium text-violet-700 dark:text-violet-300">
+            <div className="rounded-lg bg-primary/10 p-3 text-sm">
+              <p className="mb-1 font-medium text-primary">
                 AI 분석 결과
               </p>
               <p className="text-muted-foreground">{detail.aiAnalysis}</p>

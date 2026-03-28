@@ -68,7 +68,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
               )}
             >
               <span className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200",
+                "absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all duration-200",
                 scope.scope1 ? "left-[22px]" : "left-0.5"
               )} />
             </button>
@@ -90,7 +90,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
               )}
             >
               <span className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200",
+                "absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all duration-200",
                 scope.scope2 ? "left-[22px]" : "left-0.5"
               )} />
             </button>
@@ -112,7 +112,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
               )}
             >
               <span className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200",
+                "absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all duration-200",
                 scope.scope3 ? "left-[22px]" : "left-0.5"
               )} />
             </button>

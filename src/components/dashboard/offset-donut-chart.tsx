@@ -21,12 +21,12 @@ export function OffsetDonutChart({ data, isLoading, fillHeight }: OffsetDonutCha
     {
       name: "배출 총량",
       value: remaining,
-      fill: "hsl(142 76% 36%)",
+      fill: "hsl(var(--carbon-success))",
     },
     {
       name: "OFFSET",
       value: data.offsetT,
-      fill: "hsl(25 95% 53%)",
+      fill: "hsl(var(--carbon-warning))",
     },
   ];
 

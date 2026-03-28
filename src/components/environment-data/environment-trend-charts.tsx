@@ -22,9 +22,9 @@ import type {
 import { cn } from "@/lib/utils";
 
 const SCOPE_COLORS = {
-  scope1: "hsl(142 76% 36%)",
-  scope2: "hsl(200 80% 45%)",
-  scope3: "hsl(25 95% 53%)",
+  scope1: "hsl(var(--taupe-400))",
+  scope2: "hsl(var(--carbon-success))",
+  scope3: "hsl(var(--taupe-300))",
 };
 
 type PeriodTab = "monthly" | "quarterly" | "yearly";
@@ -169,7 +169,7 @@ export function EnvironmentTrendCharts({
                   type="monotone"
                   dataKey="renewable"
                   name="재생에너지 비율 (%)"
-                  stroke="hsl(142 76% 36%)"
+                  stroke="hsl(var(--carbon-success))"
                   strokeWidth={2}
                   dot={false}
                 />
