@@ -7,9 +7,9 @@ import { ArrowLeft, ArrowRight, Sparkles, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SCOPE_INFO = {
-  1: { label: "Scope 1 — 직접 배출", desc: "사업장에서 직접 발생하는 온실가스 (연료 연소, 공정 배출 등)", color: "text-emerald-600" },
-  2: { label: "Scope 2 — 간접 배출 (에너지)", desc: "구매 전력·열 사용에 의한 간접 배출", color: "text-blue-600" },
-  3: { label: "Scope 3 — 기타 간접 배출", desc: "공급망, 제품 사용, 임직원 통근 등 가치사슬 전반", color: "text-orange-600" },
+  1: { label: "Scope 1 — 직접 배출", desc: "사업장에서 직접 발생하는 온실가스 (연료 연소, 공정 배출 등)" },
+  2: { label: "Scope 2 — 간접 배출 (에너지)", desc: "구매 전력·열 사용에 의한 간접 배출" },
+  3: { label: "Scope 3 — 기타 간접 배출", desc: "공급망, 제품 사용, 임직원 통근 등 가치사슬 전반" },
 };
 
 export default function ScopePage() {
@@ -54,7 +54,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
 
       <div className="flex flex-col gap-5">
         {/* Scope 1 */}
-        <div className={cn("rounded-xl border p-4", scope.scope1 ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-border")}>
+        <div className={cn("rounded-xl border p-4", scope.scope1 ? "border-primary/30 bg-primary/5" : "border-border")}>
           <div className="flex items-start justify-between">
             <div>
               <p className="font-semibold text-foreground">{SCOPE_INFO[1].label}</p>
@@ -64,7 +64,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
               onClick={() => updateScope({ scope1: !scope.scope1 })}
               className={cn(
                 "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-                scope.scope1 ? "bg-emerald-500" : "bg-muted"
+                scope.scope1 ? "bg-primary" : "bg-muted"
               )}
             >
               <span className={cn(
@@ -76,7 +76,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
         </div>
 
         {/* Scope 2 */}
-        <div className={cn("rounded-xl border p-4", scope.scope2 ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30" : "border-border")}>
+        <div className={cn("rounded-xl border p-4", scope.scope2 ? "border-primary/30 bg-primary/5" : "border-border")}>
           <div className="flex items-start justify-between">
             <div>
               <p className="font-semibold text-foreground">{SCOPE_INFO[2].label}</p>
@@ -86,7 +86,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
               onClick={() => updateScope({ scope2: !scope.scope2 })}
               className={cn(
                 "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-                scope.scope2 ? "bg-blue-500" : "bg-muted"
+                scope.scope2 ? "bg-primary" : "bg-muted"
               )}
             >
               <span className={cn(
@@ -98,7 +98,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
         </div>
 
         {/* Scope 3 카테고리 */}
-        <div className={cn("rounded-xl border p-4", scope.scope3 ? "border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20" : "border-border")}>
+        <div className={cn("rounded-xl border p-4", scope.scope3 ? "border-primary/30 bg-primary/5" : "border-border")}>
           <div className="mb-3 flex items-start justify-between">
             <div>
               <p className="font-semibold text-foreground">{SCOPE_INFO[3].label}</p>
@@ -108,7 +108,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
               onClick={() => updateScope({ scope3: !scope.scope3 })}
               className={cn(
                 "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-                scope.scope3 ? "bg-orange-500" : "bg-muted"
+                scope.scope3 ? "bg-primary" : "bg-muted"
               )}
             >
               <span className={cn(
@@ -121,7 +121,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
           {scope.scope3 && (
             <>
               {aiRec && (
-                <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400">
+                <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-primary">
                   <Sparkles className="h-3.5 w-3.5" />
                   {organization.industry} 산업 AI 추천 카테고리가 강조 표시됩니다
                 </div>
@@ -140,7 +140,7 @@ const { state, updateScope, markStepComplete } = useWizardStore();
                           <span className="text-[10px] text-muted-foreground">{group.desc}</span>
                         </div>
                         {selectedCount > 0 && (
-                          <span className="rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                          <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                             {selectedCount}개 선택
                           </span>
                         )}
@@ -157,14 +157,14 @@ const { state, updateScope, markStepComplete } = useWizardStore();
                               className={cn(
                                 "rounded-lg border px-3 py-1.5 text-xs transition-all",
                                 selected
-                                  ? "border-orange-400 bg-orange-100 font-semibold text-orange-800 dark:border-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                                  ? "border-primary bg-primary/10 font-semibold text-primary"
                                   : recommended
-                                  ? "border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-400"
-                                  : "border-border text-muted-foreground hover:border-orange-300 hover:text-foreground"
+                                  ? "border-secondary bg-secondary/10 text-secondary-foreground hover:border-secondary"
+                                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
                               )}
                             >
                               {recommended && !selected && (
-                                <Sparkles className="mr-1 inline h-3 w-3 text-violet-500" />
+                                <Sparkles className="mr-1 inline h-3 w-3 text-secondary" />
                               )}
                               {cat}
                             </button>
