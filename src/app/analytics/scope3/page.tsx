@@ -1234,7 +1234,15 @@ export default function Scope3Page() {
                 savedFromDb={!!dbScope3Facilities && dbScope3Facilities.length > 0}
               />
             )}
-            <Scope3SourceReference activeCategoryId={selectedCategoryId} />
+            <Scope3SourceReference
+              activeCategoryId={selectedCategoryId}
+              facilities={scope3Facilities.map((f) => ({
+                id: f.id,
+                name: f.facilityName,
+                activityType: f.activityType,
+                unit: f.unit,
+              }))}
+            />
           </div>
 
           {/* 월별 입력 영역 */}

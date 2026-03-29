@@ -187,10 +187,56 @@ const CATEGORY_LABELS: Record<string, string> = {
   governance: "거버넌스",
 };
 
+/* ── 자동 집계 Scope 프리셋 ── */
+const AUTO_CALC_PRESETS: { label: string; rule: { scope: number | number[]; categories?: string[]; formula: string } }[] = [
+  { label: "Scope 1 전체", rule: { scope: 1, formula: "emission" } },
+  { label: "Scope 1 — 고정연소", rule: { scope: 1, categories: ["fixed"], formula: "emission" } },
+  { label: "Scope 1 — 이동연소", rule: { scope: 1, categories: ["mobile"], formula: "emission" } },
+  { label: "Scope 2 전체", rule: { scope: 2, formula: "emission" } },
+  { label: "Scope 2 — 구입전력", rule: { scope: 2, categories: ["electricity"], formula: "emission" } },
+  { label: "Scope 3 전체", rule: { scope: 3, formula: "emission" } },
+  { label: "Scope 1+2 합산", rule: { scope: [1, 2], formula: "emission" } },
+  { label: "Scope 1+2+3 합산", rule: { scope: [1, 2, 3], formula: "emission" } },
+];
+
 /* ── 매핑 행 ── */
 function MappingRow({ item }: { item: KpiMappingItem }) {
   const [open, setOpen] = useState(false);
   const CatIcon = CATEGORY_ICONS[item.category] ?? Leaf;
+
+  // 산출 방식 — 로컬 상태 (실제 저장은 PUT /api/kpi/[id]/value)
+  const isCarbon = item.category === "carbon" || (item.category === "environment" && item.unit === "tCO2e");
+  const [calcType, setCalcType] = useState<"auto" | "manual">(isCarbon ? "auto" : "manual");
+  const [selectedPreset, setSelectedPreset] = useState(
+    isCarbon
+      ? item.kpiName.includes("Scope 1") ? 0
+        : item.kpiName.includes("Scope 2") ? 3
+          : item.kpiName.includes("Scope 3") ? 5
+            : 7 // 전체
+      : -1
+  );
+  const [autoValue, setAutoValue] = useState<number | null>(null);
+  const [isCalcing, setIsCalcing] = useState(false);
+
+  const handleCalcTypeChange = (type: "auto" | "manual") => {
+    setCalcType(type);
+    setAutoValue(null);
+  };
+
+  const handlePreviewAutoValue = async () => {
+    if (selectedPreset < 0) return;
+    setIsCalcing(true);
+    // 시뮬레이션 — 실제 운영에서는 PUT으로 calcRule 저장 후 GET /api/kpi/[id]/value 호출
+    const preset = AUTO_CALC_PRESETS[selectedPreset];
+    try {
+      // 임시: 프리셋 기반 예시값 (실제 DB 데이터 기반 계산은 API에서)
+      await new Promise((r) => setTimeout(r, 500));
+      const mockVal = item.actual ? Number(item.actual) : 0;
+      setAutoValue(mockVal);
+    } finally {
+      setIsCalcing(false);
+    }
+  };
 
   return (
     <div className="border-b border-border last:border-b-0">
@@ -228,6 +274,15 @@ function MappingRow({ item }: { item: KpiMappingItem }) {
             <span className="text-sm font-medium text-foreground truncate">
               {item.kpiName}
             </span>
+            {/* 산출 방식 배지 */}
+            <span className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-medium",
+              calcType === "auto"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-muted-foreground"
+            )}>
+              {calcType === "auto" ? "자동 집계" : "수동"}
+            </span>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>{CATEGORY_LABELS[item.category]}</span>
@@ -256,16 +311,76 @@ function MappingRow({ item }: { item: KpiMappingItem }) {
         </div>
       </button>
 
-      {/* 연결된 데이터 엔트리 */}
+      {/* 확장 패널 */}
       {open && (
-        <div className="bg-muted/30 px-4 pb-3">
+        <div className="bg-muted/30 px-4 pb-3 space-y-3">
+          {/* 산출 방식 선택 */}
+          <div className="flex items-center gap-4 rounded-lg border border-border bg-card p-3">
+            <span className="text-xs font-medium text-muted-foreground shrink-0">연결 방식</span>
+            <div className="inline-flex items-center gap-0.5 rounded-md border border-border bg-muted/50 p-0.5">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleCalcTypeChange("auto"); }}
+                className={cn(
+                  "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                  calcType === "auto" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                자동 집계
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleCalcTypeChange("manual"); }}
+                className={cn(
+                  "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                  calcType === "manual" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                수동 입력
+              </button>
+            </div>
+
+            {/* 자동 집계: 프리셋 선택 */}
+            {calcType === "auto" && (
+              <div className="flex items-center gap-2 flex-1">
+                <select
+                  value={selectedPreset}
+                  onChange={(e) => { setSelectedPreset(Number(e.target.value)); setAutoValue(null); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-7 rounded-md border border-input bg-transparent px-2 text-xs flex-1 max-w-[200px]"
+                >
+                  {AUTO_CALC_PRESETS.map((p, i) => (
+                    <option key={i} value={i}>{p.label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handlePreviewAutoValue(); }}
+                  disabled={isCalcing}
+                  className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {isCalcing ? "계산 중..." : "미리보기"}
+                </button>
+                {autoValue !== null && (
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    = {autoValue.toLocaleString("ko-KR")} {item.unit}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 연결된 데이터 엔트리 */}
           {item.dataEntries.length === 0 ? (
             <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
               <XCircle className="h-4 w-4 text-carbon-danger" />
-              연결된 데이터 항목이 없습니다. 데이터 입력 후 매핑을 설정하세요.
+              {calcType === "auto"
+                ? "배출량 관리에서 활동 데이터를 입력하면 자동으로 값이 산출됩니다."
+                : "연결된 데이터 항목이 없습니다. 데이터 입력 후 매핑을 설정하세요."
+              }
             </div>
           ) : (
-            <div className="space-y-1.5 pt-1">
+            <div className="space-y-1.5">
               {item.dataEntries.map((entry) => (
                 <div
                   key={entry.id}

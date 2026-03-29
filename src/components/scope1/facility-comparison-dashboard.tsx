@@ -65,9 +65,16 @@ const FACILITY_COLORS = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
+  // Scope 1
   fixed: "#10b981",
   mobile: "#3b82f6",
   fugitive: "#f59e0b",
+  // Scope 2
+  electricity: "#3b82f6",
+  heat: "#f59e0b",
+  // Scope 3 fallback
+  upstream: "#10b981",
+  downstream: "#8b5cf6",
 };
 
 const YEAR_COLORS = ["#10b981", "#94a3b8", "#d1d5db"];
@@ -385,6 +392,12 @@ export function FacilityComparisonDashboard({
               })}
             </div>
 
+            {/* 합계 */}
+            <div className="flex items-center justify-end gap-3 text-sm">
+              <span className="text-muted-foreground">Scope 1 합계:</span>
+              <span className="font-bold tabular-nums text-foreground">{fmt(categoryTotal)} tCO₂e</span>
+            </div>
+
             {/* 카테고리 Grouped Bar Chart */}
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">월별 카테고리별 배출량</p>
@@ -416,58 +429,6 @@ export function FacilityComparisonDashboard({
               </ResponsiveContainer>
             </div>
 
-            {/* 카테고리 비중 도넛 */}
-            <div className="flex items-center justify-center gap-8">
-              <ResponsiveContainer width={200} height={200}>
-                <PieChart>
-                  <Pie
-                    data={categories.map((c) => ({
-                      name: c.label,
-                      value: Math.round(c.total * 100) / 100,
-                    }))}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {categories.map((c) => (
-                      <Cell key={c.categoryId} fill={CATEGORY_COLORS[c.categoryId]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 11,
-                    }}
-                    formatter={(value: number) => [`${fmt(value)} tCO₂e`]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2">
-                {categories.map((c) => {
-                  const pct = categoryTotal > 0 ? (c.total / categoryTotal) * 100 : 0;
-                  return (
-                    <div key={c.categoryId} className="flex items-center gap-3 text-xs">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[c.categoryId] }} />
-                      <span className="w-16 font-medium text-foreground">{c.label}</span>
-                      <span className="tabular-nums text-muted-foreground">{fmt(c.total)} t</span>
-                      <span className="tabular-nums font-medium text-foreground">{fmt(pct, 1)}%</span>
-                    </div>
-                  );
-                })}
-                <div className="border-t border-border pt-2 flex items-center gap-3 text-xs font-semibold">
-                  <span className="h-2.5 w-2.5 shrink-0" />
-                  <span className="w-16">합계</span>
-                  <span className="tabular-nums">{fmt(categoryTotal)} t</span>
-                  <span>100%</span>
-                </div>
-              </div>
-            </div>
           </>
         )}
 

@@ -12,7 +12,6 @@ import {
 import { Scope2SourceExamples } from "@/components/scope2/source-examples";
 import { Scope2MonthlyActivityTable } from "@/components/scope2/monthly-activity-table";
 import { ValidationInsightsCard } from "@/components/scope1/validation-insights-card";
-import { EmissionTrendCard } from "@/components/scope1/emission-trend-card";
 import { AuditLogTable } from "@/components/scope1/audit-log-table";
 import { ActionFooter, type DataStatus } from "@/components/scope1/action-footer";
 import { SCOPE2_CATEGORIES } from "@/lib/scope2-mock-data";
@@ -23,6 +22,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PenLine, BarChart3, ShieldCheck, Plug } from "lucide-react";
 import { ApiIntegrationPanel } from "@/components/integrations/api-integration-panel";
+import { useScopeComparison } from "@/hooks/use-scope-comparison";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const FacilityComparisonDashboard = dynamic(
+  () => import("@/components/scope1/facility-comparison-dashboard").then((m) => ({ default: m.FacilityComparisonDashboard })),
+  { ssr: false, loading: () => <Skeleton className="h-96 w-full rounded-xl" /> }
+);
 import { useFacilities, useSaveFacilities, type DbFacilityRow } from "@/hooks/use-facilities";
 import { useActivity, useSaveActivity } from "@/hooks/use-activity";
 import { useScopeEmissionFactors } from "@/hooks/use-emission-factors";
@@ -161,6 +168,22 @@ export default function Scope2Page() {
   const totalEmission = useMemo(() => monthlyTotals.reduce((s, v) => s + v, 0), [monthlyTotals]);
   const hasErrors = currentActivity.some((v) => v < 0);
 
+  // 통합 비교 분석용 데이터
+  const SCOPE2_CATEGORY_DEFS = [
+    { id: "electricity", label: "구입전력" },
+    { id: "heat", label: "증기·열" },
+  ];
+  const getScope2FactorCombined = (energyOrFuel: string): number => {
+    const f = getDbFactor(energyOrFuel as Scope2EnergyType);
+    if (f) return f.combined;
+    return getEmissionFactorForEnergy(
+      energyOrFuel === "Electricity" ? "Electricity" : "Steam"
+    );
+  };
+  const { facilityEmissions, categoryEmissions, yearComparisons } = useScopeComparison(
+    2, SCOPE2_CATEGORY_DEFS, selectedCategoryId, year, getScope2FactorCombined,
+  );
+
   const historicalMonthly = useMemo<HistoricalMonthly[]>(() => {
     const entries: HistoricalMonthly[] = [
       { year: prevYear1, values: prevYear1Activity ?? Array(12).fill(0) },
@@ -246,7 +269,16 @@ export default function Scope2Page() {
                 isSaving={saveFacilitiesMutation.isPending}
                 savedFromDb={!!dbFacilities && dbFacilities.length > 0}
               />
-              <Scope2SourceExamples activeCategoryId={selectedCategoryId} />
+              <Scope2SourceExamples
+                activeCategoryId={selectedCategoryId}
+                facilities={effectiveFacilities.map((f) => ({
+                  id: f.id,
+                  name: f.facilityName,
+                  energyType: f.energyType,
+                  unit: f.unit,
+                  emissionFactor: getDbFactor(f.energyType as any)?.combined,
+                }))}
+              />
             </div>
 
             <Scope2MonthlyActivityTable
@@ -334,7 +366,13 @@ export default function Scope2Page() {
 
           {/* ═══ Tab 3: 분석 & 비교 ═══ */}
           <TabsContent value="analysis">
-            <EmissionTrendCard monthlyTotals={monthlyTotals} label="Scope 2" />
+            <FacilityComparisonDashboard
+              facilities={facilityEmissions}
+              categories={categoryEmissions}
+              yearComparisons={yearComparisons}
+              currentYear={year}
+              currentCategoryId={selectedCategoryId as any}
+            />
           </TabsContent>
 
           {/* ═══ Tab 3: 검증 & 이력 ═══ */}

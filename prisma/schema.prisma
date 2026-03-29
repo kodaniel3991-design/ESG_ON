@@ -239,6 +239,10 @@ model KpiMaster {
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at")
   esgDomain      String?          @map("esg_domain") @db.VarChar(20)
+  /// auto: 배출량 데이터에서 자동 집계, manual: 수동 입력값 사용
+  calcType       String           @default("manual") @map("calc_type") @db.VarChar(20)
+  /// JSON: 자동 집계 룰 { scope, categories, formula, aggregation }
+  calcRule       String?          @map("calc_rule") @db.Text
   changeLogs     KpiChangeLog[]
   performance    KpiPerformance[]
   targets        KpiTarget[]

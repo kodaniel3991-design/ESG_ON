@@ -417,7 +417,16 @@ export default function Scope1Page() {
                 onSave={handleSaveFacilities}
                 isSaving={saveFacilitiesMutation.isPending}
               />
-              <SourceReference activeCategoryId={selectedCategoryId} />
+              <SourceReference
+                activeCategoryId={selectedCategoryId}
+                facilities={effectiveFacilities.map((f) => ({
+                  id: f.id,
+                  name: f.facilityName,
+                  fuel: f.fuelName,
+                  unit: f.unit,
+                  emissionFactor: getDbFactor(f.fuelName as any)?.combined,
+                }))}
+              />
             </div>
 
             <MonthlyActivityTable
