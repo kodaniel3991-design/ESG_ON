@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,8 +44,13 @@ export default function SettingsOrganizationPage() {
 
   const saveMutation = useMutation({
     mutationFn: saveOrganizationSettings,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["organization-settings"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organization-settings"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
+    },
   });
 
   // ── 조직 구조 ──────────────────────────────────
