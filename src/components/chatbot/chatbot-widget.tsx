@@ -1,9 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, X, Send, Minus } from "lucide-react";
+import { Bot, X, Send, Minus, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/** 마크다운 텍스트를 React 노드로 변환 (굵게, 링크 버튼) */
+function renderMarkdown(text: string): ReactNode[] {
+  const lines = text.split("\n");
+  const nodes: ReactNode[] = [];
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    // 링크 패턴: [텍스트](url)
+    const parts: ReactNode[] = [];
+    let lastIdx = 0;
+    const linkRe = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+    while ((match = linkRe.exec(line)) !== null) {
+      // 링크 앞 텍스트
+      if (match.index > lastIdx) {
+        parts.push(renderBold(line.slice(lastIdx, match.index), `${li}-${lastIdx}`));
+      }
+      const label = match[1];
+      const href = match[2];
+      parts.push(
+        <a
+          key={`${li}-link-${match.index}`}
+          href={href}
+          className="mt-1 mb-1 flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors w-fit"
+        >
+          <ExternalLink className="h-3 w-3" />
+          {label}
+        </a>
+      );
+      lastIdx = match.index + match[0].length;
+    }
+    if (lastIdx < line.length) {
+      parts.push(renderBold(line.slice(lastIdx), `${li}-${lastIdx}`));
+    }
+    if (parts.length === 0 && line === "") {
+      nodes.push(<br key={`br-${li}`} />);
+    } else {
+      nodes.push(<span key={`line-${li}`}>{parts}</span>);
+      if (li < lines.length - 1) nodes.push(<br key={`br-${li}`} />);
+    }
+  }
+  return nodes;
+}
+
+/** **굵게** 패턴 처리 */
+function renderBold(text: string, keyPrefix: string): ReactNode {
+  const parts: ReactNode[] = [];
+  let lastIdx = 0;
+  const boldRe = /\*\*(.+?)\*\*/g;
+  let match;
+  while ((match = boldRe.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(text.slice(lastIdx, match.index));
+    }
+    parts.push(<strong key={`${keyPrefix}-b-${match.index}`}>{match[1]}</strong>);
+    lastIdx = match.index + match[0].length;
+  }
+  if (lastIdx < text.length) {
+    parts.push(text.slice(lastIdx));
+  }
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
 
 interface ChatbotConfig {
   enabled: boolean;
@@ -202,13 +265,13 @@ export function ChatbotWidget() {
               <div
                 key={i}
                 className={cn(
-                  "max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
+                  "max-w-[85%] rounded-lg px-3 py-2 text-sm",
                   msg.role === "user"
-                    ? cn("ml-auto", isDark ? "bg-blue-900/50 text-blue-100" : "bg-primary/10 text-primary")
+                    ? cn("ml-auto whitespace-pre-wrap", isDark ? "bg-blue-900/50 text-blue-100" : "bg-primary/10 text-primary")
                     : cn(isDark ? "bg-gray-700" : "bg-muted")
                 )}
               >
-                {msg.content}
+                {msg.role === "user" ? msg.content : renderMarkdown(msg.content)}
               </div>
             ))}
 
