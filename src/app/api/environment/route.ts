@@ -167,6 +167,119 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(items);
     }
 
+    if (type === "table") {
+      // Scope별 연간 배출량을 테이블 행으로 반환
+      const emRows = await prisma.$queryRaw<{ scope: number; total: number; facility_count: number }[]>`
+        SELECT ef.scope,
+               SUM(ad.activity_value * COALESCE(em.co2_factor, 0)) AS total,
+               COUNT(DISTINCT ef.id) AS facility_count
+        FROM activity_data ad
+        JOIN emission_facilities ef ON ad.facility_id = ef.id
+        LEFT JOIN LATERAL (
+          SELECT co2_factor FROM emission_factor_master
+          WHERE fuel_code = COALESCE(ef.fuel_type, ef.energy_type) LIMIT 1
+        ) em ON true
+        WHERE ad.year = ${year} AND ef.category_id != 'u7'
+        GROUP BY ef.scope
+      `;
+
+      // 총 활동량 (에너지 사용량 추정)
+      const activityRows = await prisma.$queryRaw<{ scope: number; total_activity: number }[]>`
+        SELECT ef.scope, SUM(ad.activity_value) AS total_activity
+        FROM activity_data ad
+        JOIN emission_facilities ef ON ad.facility_id = ef.id
+        WHERE ad.year = ${year} AND ef.category_id != 'u7'
+        GROUP BY ef.scope
+      `;
+
+      const scopeMap: Record<number, { emission: number; activity: number; facilities: number }> = {};
+      for (const r of emRows) {
+        scopeMap[r.scope] = {
+          emission: parseFloat(String(r.total)) || 0,
+          activity: 0,
+          facilities: parseInt(String(r.facility_count)) || 0,
+        };
+      }
+      for (const r of activityRows) {
+        if (scopeMap[r.scope]) scopeMap[r.scope].activity = parseFloat(String(r.total_activity)) || 0;
+      }
+
+      // U7 배출량
+      let u7Emission = 0;
+      const u7Facs = await prisma.emissionFacility.findMany({ where: { scope: 3, categoryId: "u7" } });
+      if (u7Facs.length > 0) {
+        const u7Act = await prisma.activityData.findMany({ where: { facilityId: { in: u7Facs.map((f) => f.id) }, year } });
+        const emps = await prisma.employee.findMany({ where: { commuteDistanceKm: { not: null } } });
+        for (const fac of u7Facs) {
+          const facT = fac.activityType ? (TRANSPORT_MAP[fac.activityType] ?? fac.activityType) : "car";
+          const facFuel = fac.fuelType === "전기차" ? null : fac.fuelType;
+          const matched = emps.filter((e) => {
+            const eT = e.commuteTransport ? (TRANSPORT_MAP[e.commuteTransport] ?? e.commuteTransport) : "car";
+            const eF = e.fuel === "전기차" ? null : e.fuel;
+            return e.worksiteId === fac.worksiteId && eT === facT && (eF ?? "") === (facFuel ?? "");
+          });
+          const daily = matched.reduce((s, e) => s + (Number(e.commuteDistanceKm) || 0) * 2 * getKmFactor(e.commuteTransport, e.fuel), 0);
+          u7Emission += u7Act.filter((a) => a.facilityId === fac.id).reduce((s, a) => s + daily * (Number(a.activityValue) || 0), 0);
+        }
+      }
+
+      const rows = [];
+      const s1 = scopeMap[1];
+      const s2 = scopeMap[2];
+      const s3 = scopeMap[3];
+
+      if (s1 && s1.emission > 0) {
+        rows.push({
+          id: `scope1-${year}`, category: "온실가스", indicatorName: "Scope 1 배출량",
+          value: Math.round(s1.emission * 100) / 100, unit: "tCO2e", period: String(year),
+          source: "Scope 1 > 고정연소", sourceLink: "/analytics/scope1",
+          evidenceCount: s1.facilities, status: "verified",
+        });
+      }
+      if (s2 && s2.emission > 0) {
+        rows.push({
+          id: `scope2-${year}`, category: "온실가스", indicatorName: "Scope 2 배출량",
+          value: Math.round(s2.emission * 100) / 100, unit: "tCO2e", period: String(year),
+          source: "Scope 2 > 구입전력", sourceLink: "/analytics/scope2",
+          evidenceCount: s2.facilities, status: "verified",
+        });
+      }
+
+      const scope3Total = (s3 ? s3.emission : 0) + u7Emission;
+      if (scope3Total > 0) {
+        rows.push({
+          id: `scope3-${year}`, category: "온실가스", indicatorName: "Scope 3 배출량",
+          value: Math.round(scope3Total * 100) / 100, unit: "tCO2e", period: String(year),
+          source: "Scope 3 > 직원 출퇴근 외", sourceLink: "/analytics/scope3",
+          evidenceCount: (s3?.facilities ?? 0) + u7Facs.length, status: "verified",
+        });
+      }
+
+      // 총 에너지 사용량
+      const totalActivity = Object.values(scopeMap).reduce((s, v) => s + v.activity, 0);
+      if (totalActivity > 0) {
+        rows.push({
+          id: `energy-${year}`, category: "에너지", indicatorName: "총 에너지 사용량 (활동량 합계)",
+          value: Math.round(totalActivity * 100) / 100, unit: "활동량 단위",
+          period: String(year), source: "Scope 1+2 활동량", sourceLink: "/analytics/scope1",
+          evidenceCount: Object.values(scopeMap).reduce((s, v) => s + v.facilities, 0), status: "verified",
+        });
+      }
+
+      // 총 GHG
+      const ghgTotal = Object.values(scopeMap).reduce((s, v) => s + v.emission, 0) + u7Emission;
+      if (ghgTotal > 0) {
+        rows.unshift({
+          id: `ghg-total-${year}`, category: "온실가스", indicatorName: "총 GHG 배출량",
+          value: Math.round(ghgTotal * 100) / 100, unit: "tCO2e", period: String(year),
+          source: "Scope 1+2+3 합산", sourceLink: "/analytics/scope1",
+          evidenceCount: 0, status: "verified",
+        });
+      }
+
+      return NextResponse.json(rows);
+    }
+
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   } catch (err: any) {
     console.error("[GET /api/environment]", err);

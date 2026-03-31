@@ -92,8 +92,8 @@ export default function Scope2Page() {
     }
   }, [worksites, selectedWorksiteId]);
 
-  const { data: dbFacilities } = useFacilities(2, undefined, selectedWorksiteId || undefined);
-  const saveFacilitiesMutation = useSaveFacilities(2, "", selectedWorksiteId || undefined);
+  const { data: dbFacilities } = useFacilities(2, selectedCategoryId, selectedWorksiteId || undefined);
+  const saveFacilitiesMutation = useSaveFacilities(2, selectedCategoryId, selectedWorksiteId || undefined);
 
   const facilities: Scope2FacilityRow[] = useMemo(
     () => (dbFacilities && dbFacilities.length > 0 ? dbRowsToScope2(dbFacilities) : INITIAL_SCOPE2_ROWS),

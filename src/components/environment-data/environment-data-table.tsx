@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { DataStatusBadge } from "./data-status-badge";
 import { formatNumber } from "@/lib/format";
 import type { EnvironmentDataRow } from "@/types/environment-data";
-import { MoreHorizontal, FileText } from "lucide-react";
+import { MoreHorizontal, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 interface EnvironmentDataTableProps {
   rows: EnvironmentDataRow[];
@@ -76,8 +77,18 @@ export function EnvironmentDataTable({
                 <td className="px-4 py-3 text-muted-foreground">
                   {row.period}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {row.source}
+                <td className="px-4 py-3 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                  {(row as any).sourceLink ? (
+                    <Link
+                      href={(row as any).sourceLink}
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {row.source}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    row.source
+                  )}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {row.evidenceCount} file{row.evidenceCount !== 1 ? "s" : ""}

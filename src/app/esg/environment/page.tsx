@@ -22,7 +22,6 @@ const EnvironmentTrendCharts = dynamic(
 import { Scope3Breakdown } from "@/components/environment-data/scope3-breakdown";
 import {
   MOCK_AI_INSIGHT,
-  MOCK_ENV_TABLE_ROWS,
   MOCK_DATA_QUALITY,
   getDetailById,
 } from "@/lib/mock/environment-data";
@@ -57,6 +56,17 @@ export default function EnvironmentPage() {
     queryKey: ["env-monthly", currentYear],
     queryFn: async () => {
       const res = await fetch(`/api/environment?type=monthly&year=${currentYear}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
+  // 실제 DB 데이터: 환경 데이터 테이블
+  const { data: tableRows = [] } = useQuery({
+    queryKey: ["env-table", currentYear],
+    queryFn: async () => {
+      const res = await fetch(`/api/environment?type=table&year=${currentYear}`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -105,7 +115,7 @@ export default function EnvironmentPage() {
             환경 데이터 목록
           </h2>
           <EnvironmentDataTable
-            rows={MOCK_ENV_TABLE_ROWS}
+            rows={tableRows}
             onRowClick={setSelectedRow}
           />
         </section>
