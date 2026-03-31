@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSidebar } from "./sidebar-context";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 export function TopHeader() {
   const router = useRouter();
   const { collapsed } = useSidebar();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -69,9 +71,9 @@ export function TopHeader() {
               aria-label="사용자 메뉴"
             >
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary">
-                K
+                {user?.name?.charAt(0) ?? "?"}
               </div>
-              <span className="text-sm font-medium">Kim, Admin</span>
+              <span className="text-sm font-medium">{user?.name ?? "사용자"}</span>
               <ChevronDown className="h-3.5 w-3.5 opacity-50" />
             </button>
           </DropdownMenuTrigger>

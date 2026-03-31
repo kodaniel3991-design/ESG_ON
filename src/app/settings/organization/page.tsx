@@ -329,11 +329,11 @@ export default function SettingsOrganizationPage() {
     await saveMutation.mutateAsync({
       ...nextForm,
       worksites: nextForm.worksites
-        .filter((w) => w.name.trim() !== "" || w.address.trim() !== "")
+        .filter((w) => w.name.trim() !== "" || (w.address ?? "").trim() !== "")
         .map((w) => ({
           id: w.id,
           name: w.name.trim() || "사업장",
-          address: w.address.trim(),
+          address: (w.address ?? "").trim(),
           addressDetail: trimOptional(w.addressDetail),
         })),
     });
@@ -398,11 +398,11 @@ export default function SettingsOrganizationPage() {
       organizationAddressDetail: trimOptional(form.organizationAddressDetail),
       defaultWorksiteId: form.defaultWorksiteId,
       worksites: form.worksites
-        .filter((w) => w.name.trim() !== "" || w.address.trim() !== "")
+        .filter((w) => w.name.trim() !== "" || (w.address ?? "").trim() !== "")
         .map((w) => ({
           id: w.id,
           name: w.name.trim() || "사업장",
-          address: w.address.trim(),
+          address: (w.address ?? "").trim(),
           addressDetail: trimOptional(w.addressDetail),
         })),
     };

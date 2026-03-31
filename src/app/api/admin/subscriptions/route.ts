@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       });
 
       // organization name 조회
-      const orgIds = [...new Set(subs.map((s) => s.organizationId))];
+      const orgIds = Array.from(new Set(subs.map((s) => s.organizationId)));
       const orgs = await prisma.organization.findMany({
         where: { id: { in: orgIds } },
         select: { id: true, organizationName: true },

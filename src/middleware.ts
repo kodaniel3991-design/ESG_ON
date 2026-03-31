@@ -7,7 +7,7 @@ const getSecret = () =>
     process.env.AUTH_SECRET ?? "dev-secret-please-change-in-production"
   );
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/chatbot/config"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/api/chatbot/config", "/api/chatbot-tools"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

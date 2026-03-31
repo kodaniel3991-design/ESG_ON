@@ -21,12 +21,23 @@ interface Message {
   content: string;
 }
 
+function getSessionId() {
+  const key = "esgon_chat_session";
+  let id = typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+  if (!id) {
+    id = crypto.randomUUID();
+    if (typeof window !== "undefined") sessionStorage.setItem(key, id);
+  }
+  return id;
+}
+
 export function ChatbotWidget() {
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId] = useState(getSessionId);
 
   const { data: config } = useQuery<ChatbotConfig>({
     queryKey: ["chatbot-config"],
@@ -58,16 +69,55 @@ export function ChatbotWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          projectId: config.projectId,
+          sessionId,
+          projectId: config.projectId ?? "esg-on",
         }),
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          { role: "bot", content: data.reply ?? data.message ?? "응답을 받지 못했습니다." },
-        ]);
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("text/event-stream")) {
+          // SSE 스트리밍 응답 처리
+          let botReply = "";
+          setMessages((prev) => [...prev, { role: "bot", content: "" }]);
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          if (reader) {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const text = decoder.decode(value, { stream: true });
+              for (const line of text.split("\n")) {
+                if (!line.startsWith("data: ")) continue;
+                try {
+                  const evt = JSON.parse(line.slice(6));
+                  if (evt.type === "chunk" && evt.content) {
+                    botReply += evt.content;
+                    setMessages((prev) => {
+                      const next = [...prev];
+                      next[next.length - 1] = { role: "bot", content: botReply };
+                      return next;
+                    });
+                  }
+                } catch { /* skip non-JSON lines */ }
+              }
+            }
+          }
+          if (!botReply) {
+            setMessages((prev) => {
+              const next = [...prev];
+              next[next.length - 1] = { role: "bot", content: "응답을 받지 못했습니다." };
+              return next;
+            });
+          }
+        } else {
+          // JSON 응답 처리
+          const data = await res.json();
+          setMessages((prev) => [
+            ...prev,
+            { role: "bot", content: data.reply ?? data.message ?? "응답을 받지 못했습니다." },
+          ]);
+        }
       } else {
         setMessages((prev) => [
           ...prev,
