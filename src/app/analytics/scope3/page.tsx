@@ -1,7 +1,7 @@
  "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { ScopeTabs } from "@/components/scope1/scope-tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,8 +32,9 @@ import { useActivity, useSaveActivity } from "@/hooks/use-activity";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 import type { HistoricalMonthly } from "@/components/scope1/validation-insights-card";
 import { useEmployees } from "@/hooks/use-employees";
+import { useWorksites } from "@/hooks/use-worksites";
 import { calcEmployeeDailyEmission, getEmployeeCommuteFactorPerKm } from "@/lib/commute-factors";
-import type { CommuteTransportType, WorksiteItem } from "@/types";
+import type { CommuteTransportType } from "@/types";
 import { U7SourceInfoCard, type U7FacilityRow } from "@/components/scope3/u7-source-info-card";
 
 const MONTH_LABELS = [
@@ -756,14 +757,16 @@ export default function Scope3Page() {
   const [u7WorkdaysMap, setU7WorkdaysMap] = useState<Record<string, number[]>>({});
   const [localU7Facilities, setLocalU7Facilities] = useState<U7FacilityRow[]>([]);
 
-  // 사업장 목록 (u7 활성 시)
-  const { data: orgData } = useQuery<{ worksites: WorksiteItem[] }>({
-    queryKey: ["organization"],
-    queryFn: () => fetch("/api/organization").then((r) => r.json()),
-    staleTime: 1000 * 60 * 10,
-    enabled: isU7,
-  });
-  const worksites: WorksiteItem[] = orgData?.worksites ?? [];
+  // 사업장 목록 + 선택
+  const { data: worksites = [] } = useWorksites();
+  const [selectedWorksiteId, setSelectedWorksiteId] = useState<string>("");
+
+  useEffect(() => {
+    if (worksites.length > 0 && !selectedWorksiteId) {
+      const defaultWs = worksites.find((w: any) => w.isDefault) ?? worksites[0];
+      setSelectedWorksiteId(defaultWs.id);
+    }
+  }, [worksites, selectedWorksiteId]);
 
   // 직원 목록 전체 (u7 활성 시, 사업장·교통수단·연료 콤보를 행으로 표시하므로 전체 조회)
   const { data: employees = [], isLoading: employeesLoading } = useEmployees(
@@ -880,8 +883,8 @@ export default function Scope3Page() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   // 배출원 정보 상태 (DB 연동 - 카테고리별)
-  const { data: dbScope3Facilities } = useFacilities(3, selectedCategoryId);
-  const saveFacilitiesMutation = useSaveFacilities(3, selectedCategoryId);
+  const { data: dbScope3Facilities } = useFacilities(3, selectedCategoryId, selectedWorksiteId || undefined);
+  const saveFacilitiesMutation = useSaveFacilities(3, selectedCategoryId, selectedWorksiteId || undefined);
   const saveActivityMutation = useSaveActivity();
 
   // 선택된 배출원의 활동량 DB 로드 (시설 저장 후 재방문 시 복원)
@@ -928,14 +931,14 @@ export default function Scope3Page() {
   // 일반 카테고리 활동량 로컬 상태 (시설 ID 기반)
   const [scope3LocalActivity, setScope3LocalActivity] = useState<Record<string, number[]>>({});
 
-  // 카테고리 변경 시 로컬 상태 초기화
+  // 카테고리 또는 사업장 변경 시 로컬 상태 초기화
   useEffect(() => {
     setLocalScope3Facilities([]);
     setLocalU7Facilities([]);
     setSelectedFacilityId("");
     setU7WorkdaysMap({});
     setScope3LocalActivity({});
-  }, [selectedCategoryId]);
+  }, [selectedCategoryId, selectedWorksiteId]);
 
   // 연도 변경 시 로컬 활동량 초기화
   useEffect(() => {
@@ -1004,6 +1007,7 @@ export default function Scope3Page() {
       activity_type: r.activityType,
       unit: r.unit,
       data_method: r.dataMethod,
+      status: "active",
       sort_order: i,
     })));
     setLocalScope3Facilities(rows);
@@ -1021,6 +1025,7 @@ export default function Scope3Page() {
       activity_type: r.commuteTransport,
       unit: "km",
       data_method: "계산값",
+      status: "active",
       sort_order: i,
     })));
     setLocalU7Facilities(rows);
@@ -1179,6 +1184,30 @@ export default function Scope3Page() {
         </PageHeader>
       </div>
 
+      {/* 사업장 선택 */}
+      {worksites.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">사업장:</span>
+          <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-0.5">
+            {worksites.map((ws) => (
+              <button
+                key={ws.id}
+                type="button"
+                onClick={() => { setSelectedWorksiteId(ws.id); setLocalScope3Facilities([]); setLocalU7Facilities([]); setScope3LocalActivity({}); setU7WorkdaysMap({}); }}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  selectedWorksiteId === ws.id
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {ws.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[200px,1fr]">
         {/* 좌측 Scope 3 카테고리 트리 (Scope 2와 유사한 위치/형태) */}
         <Scope3CategorySidebar
@@ -1211,7 +1240,7 @@ export default function Scope3Page() {
           {/* ═══ Tab 1: 데이터 입력 ═══ */}
           <TabsContent value="input" className="space-y-6">
           {/* 배출원 정보 + 가이드 */}
-          <div className="grid gap-3 lg:grid-cols-[1fr,440px] items-start">
+          <div className="grid gap-3 lg:grid-cols-[1fr,484px] items-start">
             {isU7 ? (
               <U7SourceInfoCard
                 rows={localU7Facilities}
@@ -1232,9 +1261,18 @@ export default function Scope3Page() {
                 onSave={handleSaveScope3Facilities}
                 isSaving={saveFacilitiesMutation.isPending}
                 savedFromDb={!!dbScope3Facilities && dbScope3Facilities.length > 0}
+                worksiteName={worksites.find((w) => w.id === selectedWorksiteId)?.name}
               />
             )}
-            <Scope3SourceReference activeCategoryId={selectedCategoryId} />
+            <Scope3SourceReference
+              activeCategoryId={selectedCategoryId}
+              facilities={scope3Facilities.map((f) => ({
+                id: f.id,
+                name: f.facilityName,
+                activityType: f.activityType,
+                unit: f.unit,
+              }))}
+            />
           </div>
 
           {/* 월별 입력 영역 */}

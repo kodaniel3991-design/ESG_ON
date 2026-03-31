@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { autoMapUnlinkedKpis } from "@/lib/kpi-auto-mapping";
 
-// GET /api/facilities?scope=1&category=fixed
+// GET /api/facilities?scope=1&category=fixed&worksiteId=ws-1
 export async function GET(req: NextRequest) {
   const scope = req.nextUrl.searchParams.get("scope");
   const category = req.nextUrl.searchParams.get("category");
+  const worksiteId = req.nextUrl.searchParams.get("worksiteId");
   try {
     const where: any = {};
     if (scope) {
       where.scope = parseInt(scope);
-      if (category) {
-        where.categoryId = category;
-      }
+      if (category) where.categoryId = category;
     }
+    if (worksiteId) where.worksiteId = worksiteId;
 
     const facilities = await prisma.emissionFacility.findMany({
       where,
@@ -21,17 +22,18 @@ export async function GET(req: NextRequest) {
         : [{ scope: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     });
 
-    // Return with snake_case keys to match original response shape
     return NextResponse.json(
       facilities.map((f) => ({
         id: f.id,
         scope: f.scope,
+        worksite_id: f.worksiteId,
         facility_name: f.facilityName,
         fuel_type: f.fuelType,
         energy_type: f.energyType,
         activity_type: f.activityType,
         unit: f.unit,
         data_method: f.dataMethod,
+        status: f.status,
         category_id: f.categoryId,
         sort_order: f.sortOrder,
         created_at: f.createdAt,
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
     const body: {
       scope: number;
       categoryId?: string;
+      worksiteId?: string;
       rows: Array<{
         id: string;
         facilityName: string;
@@ -58,37 +61,35 @@ export async function POST(req: NextRequest) {
         activityType?: string;
         unit: string;
         dataMethod: string;
+        status?: string;
         sortOrder?: number;
         categoryId?: string;
       }>;
     } = await req.json();
 
     const categoryId = body.categoryId ?? "fixed";
+    const worksiteId = body.worksiteId ?? null;
     const newIds = body.rows.map((r) => r.id);
 
-    // 새 목록에 없는 시설만 삭제 (CASCADE로 activity_data/attachments도 삭제)
+    // 삭제 조건: scope + category + worksite
+    const deleteWhere: any = { scope: body.scope, categoryId };
+    if (worksiteId) deleteWhere.worksiteId = worksiteId;
+
     if (newIds.length > 0) {
       await prisma.emissionFacility.deleteMany({
-        where: {
-          scope: body.scope,
-          categoryId,
-          id: { notIn: newIds },
-        },
+        where: { ...deleteWhere, id: { notIn: newIds } },
       });
     } else {
-      // 빈 목록 저장 시 전체 삭제
-      await prisma.emissionFacility.deleteMany({
-        where: { scope: body.scope, categoryId },
-      });
+      await prisma.emissionFacility.deleteMany({ where: deleteWhere });
     }
 
-    // 각 시설을 upsert
     for (let i = 0; i < body.rows.length; i++) {
       const row = body.rows[i];
       await prisma.emissionFacility.upsert({
         where: { id: row.id },
         update: {
           scope: body.scope,
+          worksiteId,
           categoryId: row.categoryId ?? categoryId,
           facilityName: row.facilityName,
           fuelType: row.fuelType ?? null,
@@ -96,13 +97,16 @@ export async function POST(req: NextRequest) {
           activityType: row.activityType ?? null,
           unit: row.unit,
           dataMethod: row.dataMethod,
+          status: row.status ?? "active",
           sortOrder: row.sortOrder ?? i,
         },
         create: {
           id: row.id,
           scope: body.scope,
+          worksiteId,
           categoryId: row.categoryId ?? categoryId,
           facilityName: row.facilityName,
+          status: row.status ?? "active",
           fuelType: row.fuelType ?? null,
           energyType: row.energyType ?? null,
           activityType: row.activityType ?? null,
@@ -113,7 +117,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ ok: true });
+    // 시설 저장 후, 미연결 KPI에 자동 매핑 규칙 적용
+    const autoMapped = await autoMapUnlinkedKpis();
+
+    return NextResponse.json({ ok: true, autoMapped });
   } catch (err: any) {
     console.error("[POST /api/facilities]", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

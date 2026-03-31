@@ -10,9 +10,10 @@ const FACILITY_TYPES = ["공장", "사무실", "물류센터", "매장", "연구
 
 // 에너지 탭 그룹
 const ENERGY_TABS: { label: string; icon: LucideIcon; items: string[]; scope: "S1" | "S2" | null }[] = [
-  { label: "전기", icon: Zap, items: ["전기"], scope: "S2" },
-  { label: "가스", icon: Flame, items: ["도시가스", "LPG"], scope: "S1" },
-  { label: "연료", icon: Fuel, items: ["경유", "휘발유", "중유"], scope: "S1" },
+  { label: "전기", icon: Zap, items: ["일반 전력(한전)", "산업용 전력", "자가발전", "녹색프리미엄/REC"], scope: "S2" },
+  { label: "가스", icon: Flame, items: ["도시가스(LNG)", "천연가스(LNG)", "LPG", "프로판(LPG1호)", "부탄(LPG3호)"], scope: "S1" },
+  { label: "연료", icon: Fuel, items: ["경유", "휘발유", "등유", "B-A유", "B-B유", "B-C유", "나프타", "용제", "항공유", "윤활유"], scope: "S1" },
+  { label: "고체", icon: Flame, items: ["국내무연탄", "수입무연탄", "유연탄(역청탄)", "아역청탄", "코크스", "석유코크스"], scope: "S1" },
   { label: "열", icon: Thermometer, items: ["스팀", "지역난방"], scope: "S2" },
   { label: "재생에너지", icon: Leaf, items: ["태양광", "풍력", "수소"], scope: null },
 ];
@@ -354,7 +355,10 @@ export default function FacilityPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
-  const handleNext = async () => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const saveWorksites = async () => {
     await fetch("/api/organization", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -372,6 +376,24 @@ export default function FacilityPage() {
         defaultWorksiteId: facilities[0]?.id,
       }),
     });
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      await saveWorksites();
+      setSaveMessage("저장되었습니다.");
+      setTimeout(() => setSaveMessage(""), 2000);
+    } catch {
+      setSaveMessage("저장 실패");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNext = async () => {
+    await saveWorksites();
     markStepComplete(2);
     router.push("/getting-started/scope");
   };
@@ -437,20 +459,34 @@ export default function FacilityPage() {
       </button>
 
       {/* 네비게이션 */}
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between">
         <button
           onClick={() => router.push("/getting-started/organization")}
           className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> 이전
         </button>
-        <button
-          onClick={handleNext}
-          disabled={!isValid}
-          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40 hover:opacity-90"
-        >
-          다음: Scope 설정 <ArrowRight className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          {saveMessage && (
+            <span className={cn("text-xs font-medium", saveMessage === "저장되었습니다." ? "text-carbon-success" : "text-carbon-danger")}>
+              {saveMessage}
+            </span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={!isValid || isSaving}
+            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-40"
+          >
+            {isSaving ? "저장 중..." : "저장"}
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={!isValid}
+            className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40 hover:opacity-90"
+          >
+            다음: Scope 설정 <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -31,6 +31,8 @@ const FacilityComparisonDashboard = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-96 w-full rounded-xl" /> }
 );
 import { useFacilities, useSaveFacilities, type DbFacilityRow } from "@/hooks/use-facilities";
+import { useWorksites } from "@/hooks/use-worksites";
+import { cn } from "@/lib/utils";
 import { useActivity, useSaveActivity } from "@/hooks/use-activity";
 import { useScopeEmissionFactors } from "@/hooks/use-emission-factors";
 import type { HistoricalMonthly } from "@/components/scope1/validation-insights-card";
@@ -57,6 +59,7 @@ function scope2ToDbRows(rows: Scope2FacilityRow[]): DbFacilityRow[] {
     activity_type: null,
     unit: r.unit,
     data_method: r.dataMethod,
+    status: "active",
     sort_order: i,
   }));
 }
@@ -79,8 +82,18 @@ export default function Scope2Page() {
     INITIAL_SCOPE2_ROWS[0]?.id ?? "",
   );
 
-  const { data: dbFacilities } = useFacilities(2);
-  const saveFacilitiesMutation = useSaveFacilities(2, "");
+  // 사업장
+  const { data: worksites = [] } = useWorksites();
+  const [selectedWorksiteId, setSelectedWorksiteId] = useState<string>("");
+  useEffect(() => {
+    if (worksites.length > 0 && !selectedWorksiteId) {
+      const defaultWs = worksites.find((w) => w.isDefault) ?? worksites[0];
+      setSelectedWorksiteId(defaultWs.id);
+    }
+  }, [worksites, selectedWorksiteId]);
+
+  const { data: dbFacilities } = useFacilities(2, undefined, selectedWorksiteId || undefined);
+  const saveFacilitiesMutation = useSaveFacilities(2, "", selectedWorksiteId || undefined);
 
   const facilities: Scope2FacilityRow[] = useMemo(
     () => (dbFacilities && dbFacilities.length > 0 ? dbRowsToScope2(dbFacilities) : INITIAL_SCOPE2_ROWS),
@@ -152,8 +165,13 @@ export default function Scope2Page() {
   };
 
   const handleSaveFacilities = (rows: Scope2FacilityRow[]) => {
-    saveFacilitiesMutation.mutate(scope2ToDbRows(rows));
     setLocalFacilities(rows);
+    saveFacilitiesMutation.mutate(scope2ToDbRows(rows), {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["facilities", 2] });
+        setLocalFacilities([]);
+      },
+    });
   };
 
   // 배출량 계산 — DB 배출계수 우선, 없으면 하드코딩 fallback
@@ -230,6 +248,29 @@ export default function Scope2Page() {
     <div className="space-y-4">
       <Scope2Header year={year} />
 
+      {worksites.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">사업장:</span>
+          <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-0.5">
+            {worksites.map((ws) => (
+              <button
+                key={ws.id}
+                type="button"
+                onClick={() => { setSelectedWorksiteId(ws.id); setLocalFacilities([]); setLocalActivity({}); }}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  selectedWorksiteId === ws.id
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {ws.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
         <Scope2CategorySidebar
           categories={SCOPE2_CATEGORIES}
@@ -259,7 +300,7 @@ export default function Scope2Page() {
 
           {/* ═══ Tab 1: 데이터 입력 ═══ */}
           <TabsContent value="input" className="space-y-6">
-            <div className="grid gap-3 lg:grid-cols-[1fr,440px] items-start">
+            <div className="grid gap-3 lg:grid-cols-[1fr,484px] items-start">
               <Scope2SourceInfoCard
                 rows={effectiveFacilities}
                 onRowsChange={setLocalFacilities}
@@ -268,9 +309,17 @@ export default function Scope2Page() {
                 onSave={handleSaveFacilities}
                 isSaving={saveFacilitiesMutation.isPending}
                 savedFromDb={!!dbFacilities && dbFacilities.length > 0}
-                getEmissionFactor={(energy) => getDbFactor(energy as any)?.combined}
+                worksiteName={worksites.find((w) => w.id === selectedWorksiteId)?.name}
               />
-              <Scope2SourceExamples activeCategoryId={selectedCategoryId} />
+              <Scope2SourceExamples
+                activeCategoryId={selectedCategoryId}
+                facilities={effectiveFacilities.map((f) => ({
+                  id: f.id,
+                  name: f.facilityName,
+                  energyType: f.energyType,
+                  unit: f.unit,
+                }))}
+              />
             </div>
 
             <Scope2MonthlyActivityTable

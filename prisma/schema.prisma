@@ -11,6 +11,7 @@ datasource db {
 model EmissionFacility {
   id           String               @id
   scope        Int
+  worksiteId   String?              @map("worksite_id") @db.VarChar(50)
   facilityName String               @map("facility_name") @db.VarChar(200)
   fuelType     String?              @map("fuel_type") @db.VarChar(100)
   energyType   String?              @map("energy_type") @db.VarChar(100)
@@ -18,9 +19,11 @@ model EmissionFacility {
   unit         String               @db.VarChar(50)
   dataMethod   String               @map("data_method") @db.VarChar(100)
   categoryId   String               @default("fixed") @map("category_id") @db.VarChar(50)
+  status       String               @default("active") @db.VarChar(20)
   sortOrder    Int                  @default(0) @map("sort_order")
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @default(now()) @updatedAt @map("updated_at")
+  worksite     Worksite?            @relation(fields: [worksiteId], references: [id])
   attachments  ActivityAttachment[]
   activityData ActivityData[]
   auditLogs    ActivityAuditLog[]
@@ -176,6 +179,7 @@ model Worksite {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at")
   employees      Employee[]
+  facilities     EmissionFacility[]
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("worksites")

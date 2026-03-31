@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { randomUUID } from "crypto";
+import { resolveAutoCalcRule, autoMapUnlinkedKpis } from "@/lib/kpi-auto-mapping";
 
 // GET /api/kpi?type=master|targets|performance|change-log
 export async function GET(req: NextRequest) {
@@ -23,6 +24,8 @@ export async function GET(req: NextRequest) {
           unit: r.unit,
           description: r.description ?? "",
           reportIncluded: r.reportIncluded,
+          calcType: r.calcType,
+          calcRule: r.calcRule ? JSON.parse(r.calcRule) : null,
         }))
       );
     }
@@ -307,6 +310,7 @@ export async function POST(req: NextRequest) {
         }[];
       };
       for (const item of items) {
+        const { calcType, calcRule } = resolveAutoCalcRule(item.name);
         const existing = await prisma.kpiMaster.findUnique({ where: { code: item.code } });
         if (existing) {
           await prisma.kpiMaster.update({
@@ -318,6 +322,8 @@ export async function POST(req: NextRequest) {
               unit: item.unit,
               description: item.description,
               reportIncluded: true,
+              calcType,
+              calcRule,
             },
           });
         } else {
@@ -331,11 +337,19 @@ export async function POST(req: NextRequest) {
               unit: item.unit,
               description: item.description,
               reportIncluded: true,
+              calcType,
+              calcRule,
             },
           });
         }
       }
       return NextResponse.json({ ok: true, count: items.length });
+    }
+
+    // 기존 KPI에 자동 매핑 규칙 일괄 적용 (calcRule이 없는 KPI만)
+    if (action === "auto-map-calc-rules") {
+      const updated = await autoMapUnlinkedKpis();
+      return NextResponse.json({ ok: true, updated });
     }
 
     if (action === "delete-master") {

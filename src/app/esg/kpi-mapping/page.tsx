@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { EsgSubNav } from "@/components/esg/esg-sub-nav";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -36,10 +37,6 @@ import {
   MOCK_KPI_NODES,
   MOCK_MIND_MAP_LINKS,
 } from "@/components/kpi-mapping/kpi-mind-map";
-import { mockKpiMaster, mockKpiList } from "@/lib/mock/kpi";
-import { MOCK_ENV_TABLE_ROWS } from "@/lib/mock/environment-data";
-import { MOCK_SOCIAL_TABLE_ROWS } from "@/lib/mock/social-data";
-import { MOCK_GOV_TABLE_ROWS } from "@/lib/mock/governance-data";
 import type { DataStatus } from "@/types";
 
 /* ── 매핑 상태 타입 ── */
@@ -67,52 +64,56 @@ interface KpiMappingItem {
   dataEntries: MappedDataEntry[];
 }
 
-/* ── 데이터 소스에서 매핑 생성 ── */
-function buildMappings(): KpiMappingItem[] {
-  const allDataRows = [
-    ...MOCK_ENV_TABLE_ROWS.map((r) => ({ ...r, domain: "environment" as const })),
-    ...MOCK_SOCIAL_TABLE_ROWS.map((r) => ({ ...r, domain: "social" as const })),
-    ...MOCK_GOV_TABLE_ROWS.map((r) => ({ ...r, domain: "governance" as const })),
-  ];
+/** DB에서 KPI 목록을 조회하여 매핑 상태 결정 */
+interface DbKpiItem {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  unit: string;
+  calcType?: string;
+  calcRule?: any;
+  target?: number;
+  actual?: number;
+}
 
-  return mockKpiMaster.map((kpi) => {
-    const listItem = mockKpiList.find((l) => l.id === kpi.id);
+function buildMappingsFromDb(kpis: DbKpiItem[]): KpiMappingItem[] {
+  return kpis.map((kpi) => {
+    const isAuto = kpi.calcType === "auto";
+    const hasCalcRule = isAuto && kpi.calcRule != null;
 
-    // 이름 유사도 기반 매칭 (실제에서는 DB 관계 사용)
-    const matched = allDataRows.filter(
-      (row) =>
-        row.indicatorName.includes(kpi.name) ||
-        kpi.name.includes(row.indicatorName) ||
-        (kpi.category === row.domain &&
-          row.unit === kpi.unit &&
-          row.indicatorName.toLowerCase().includes(kpi.name.split(" ")[0]))
-    );
+    const mappingStatus: MappingStatus = hasCalcRule
+      ? "linked"
+      : kpi.calcType === "manual"
+        ? "partial"
+        : "unlinked";
 
-    const mappingStatus: MappingStatus =
-      matched.length === 0
-        ? "unlinked"
-        : matched.some((m) => m.status === "pending" || m.status === "missing")
-          ? "partial"
-          : "linked";
+    // 자동 집계 KPI는 calcRule 정보를 데이터 엔트리로 표시
+    const dataEntries: MappedDataEntry[] = [];
+    if (hasCalcRule) {
+      const rule = kpi.calcRule;
+      const scopes = Array.isArray(rule.scope) ? rule.scope : [rule.scope];
+      dataEntries.push({
+        id: `auto-${kpi.id}`,
+        indicatorName: `Scope ${scopes.join("+")} 자동 집계`,
+        value: kpi.actual ?? 0,
+        unit: kpi.unit,
+        source: `배출량 관리 (${rule.formula === "activity" ? "활동량" : "배출량"})`,
+        status: "verified" as DataStatus,
+        period: String(new Date().getFullYear()),
+      });
+    }
 
     return {
       kpiId: kpi.id,
       kpiCode: kpi.code,
       kpiName: kpi.name,
-      category: kpi.category,
+      category: kpi.category as "environment" | "social" | "governance" | "carbon",
       unit: kpi.unit,
-      target: listItem?.target,
-      actual: listItem?.actual,
+      target: kpi.target,
+      actual: kpi.actual,
       mappingStatus,
-      dataEntries: matched.map((m) => ({
-        id: m.id,
-        indicatorName: m.indicatorName,
-        value: m.value,
-        unit: m.unit,
-        source: m.source,
-        status: m.status,
-        period: m.period,
-      })),
+      dataEntries,
     };
   });
 }
@@ -456,7 +457,40 @@ type FilterTab = "all" | "linked" | "partial" | "unlinked";
 type ViewMode = "mindmap" | "list";
 
 export default function KpiMappingPage() {
-  const mappings = useMemo(() => buildMappings(), []);
+  const currentYear = String(new Date().getFullYear());
+  const [isAutoMapping, setIsAutoMapping] = useState(false);
+
+  // DB에서 KPI 목록 조회 (calcType, calcRule 포함)
+  const { data: dbKpis = [], refetch: refetchKpis } = useQuery({
+    queryKey: ["kpi-list-for-mapping", currentYear],
+    queryFn: async (): Promise<DbKpiItem[]> => {
+      const res = await fetch(`/api/kpi?type=list&period=${currentYear}`);
+      if (!res.ok) return [];
+      const list = await res.json();
+      // list API에서 master 정보도 가져옴
+      const masterRes = await fetch("/api/kpi?type=master");
+      const masters = masterRes.ok ? await masterRes.json() : [];
+      const masterMap = new Map(masters.map((m: any) => [m.id, m]));
+
+      return list.map((item: any) => {
+        const master = masterMap.get(item.id) as any;
+        return {
+          id: item.id,
+          code: item.code ?? master?.code ?? "",
+          name: item.name,
+          category: item.category,
+          unit: item.unit,
+          calcType: master?.calcType ?? "manual",
+          calcRule: master?.calcRule ? (typeof master.calcRule === "string" ? JSON.parse(master.calcRule) : master.calcRule) : null,
+          target: item.target,
+          actual: item.actual,
+        };
+      });
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const mappings = useMemo(() => buildMappingsFromDb(dbKpis), [dbKpis]);
   const [viewMode, setViewMode] = useState<ViewMode>("mindmap");
   const [filter, setFilter] = useState<FilterTab>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -508,6 +542,40 @@ export default function KpiMappingPage() {
       </PageHeader>
 
       <div className="mt-8 space-y-6">
+        {/* 미연결 KPI가 있으면 자동 매핑 안내 */}
+        {(counts.unlinked + counts.partial) > 0 && (
+          <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              <span className="text-sm text-foreground">
+                미연결 KPI <strong>{counts.unlinked + counts.partial}개</strong>를 자동으로 Scope 배출량에 매핑할 수 있습니다.
+              </span>
+            </div>
+            <button
+              onClick={async () => {
+                setIsAutoMapping(true);
+                try {
+                  const res = await fetch("/api/kpi", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "auto-map-calc-rules" }),
+                  });
+                  const data = await res.json();
+                  if (data.ok) {
+                    await refetchKpis();
+                  }
+                } finally {
+                  setIsAutoMapping(false);
+                }
+              }}
+              disabled={isAutoMapping}
+              className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {isAutoMapping ? "매핑 중..." : "자동 매핑 적용"}
+            </button>
+          </div>
+        )}
+
         {/* 요약 카드 — Stat Cards Clean Minimal */}
         <CollapsibleSection title="KPI 요약">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -83,7 +83,7 @@ export type DistanceApiProvider = "none" | "kakao" | "naver" | "google" | "custo
 
 export interface WorksiteLocation {
   name: string;
-  address: string;
+  address?: string;
   addressDetail?: string;
 }
 

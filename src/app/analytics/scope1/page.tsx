@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
+import { cn } from "@/lib/utils";
 import { ScopeHeader } from "@/components/scope1/scope-header";
 import { CategorySidebar } from "@/components/scope1/category-sidebar";
 import {
   SourceInfoCard,
   INITIAL_FACILITY_ROWS_BY_CATEGORY,
+  getFuelDbCode,
   type FacilityRow,
 } from "@/components/scope1/source-info-card";
 import { SourceReference } from "@/components/scope1/source-reference";
@@ -32,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PenLine, BarChart3, ShieldCheck, Plug } from "lucide-react";
 import { useFacilities, useSaveFacilities, type DbFacilityRow } from "@/hooks/use-facilities";
+import { useWorksites } from "@/hooks/use-worksites";
 import { useActivity, useSaveActivity } from "@/hooks/use-activity";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 import { useScopeEmissionFactors } from "@/hooks/use-emission-factors";
@@ -52,6 +55,7 @@ function dbRowsToFacility(rows: DbFacilityRow[]): FacilityRow[] {
     fuelName: r.fuel_type ?? "LNG",
     unit: r.unit,
     dataMethod: r.data_method,
+    status: (r.status === "inactive" ? "inactive" : "active") as "active" | "inactive",
   }));
 }
 
@@ -66,6 +70,7 @@ function facilityToDbRows(rows: FacilityRow[], scope = 1, categoryId = "fixed"):
     activity_type: null,
     unit: r.unit,
     data_method: r.dataMethod,
+    status: r.status ?? "active",
     sort_order: i,
   }));
 }
@@ -89,9 +94,21 @@ export default function Scope1Page() {
     INITIAL_FACILITY_ROWS_BY_CATEGORY["fixed"]?.[0]?.id ?? "",
   );
 
-  // DB에서 시설 목록 로드 (실패 시 초기값 사용)
-  const { data: dbFacilities } = useFacilities(1, selectedCategoryId);
-  const saveFacilitiesMutation = useSaveFacilities(1, selectedCategoryId);
+  // 사업장 목록 + 선택
+  const { data: worksites = [] } = useWorksites();
+  const [selectedWorksiteId, setSelectedWorksiteId] = useState<string>("");
+
+  // 사업장 목록 로드 후 기본 사업장 자동 선택
+  useEffect(() => {
+    if (worksites.length > 0 && !selectedWorksiteId) {
+      const defaultWs = worksites.find((w) => w.isDefault) ?? worksites[0];
+      setSelectedWorksiteId(defaultWs.id);
+    }
+  }, [worksites, selectedWorksiteId]);
+
+  // DB에서 시설 목록 로드 (사업장 + 카테고리 필터)
+  const { data: dbFacilities } = useFacilities(1, selectedCategoryId, selectedWorksiteId || undefined);
+  const saveFacilitiesMutation = useSaveFacilities(1, selectedCategoryId, selectedWorksiteId || undefined);
 
   const facilities: FacilityRow[] = useMemo(
     () =>
@@ -170,8 +187,14 @@ export default function Scope1Page() {
   };
 
   const handleSaveFacilities = (rows: FacilityRow[]) => {
-    saveFacilitiesMutation.mutate(facilityToDbRows(rows, 1, selectedCategoryId));
     setLocalFacilities(rows);
+    saveFacilitiesMutation.mutate(facilityToDbRows(rows, 1, selectedCategoryId), {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["facilities", 1, selectedCategoryId] });
+        // DB 갱신 후 로컬 캐시 제거 → DB 데이터로 통일
+        setLocalFacilities([]);
+      },
+    });
   };
 
   // ── Excel 템플릿 다운로드 (전체 시설 DB 값 포함) ──────────────
@@ -306,7 +329,7 @@ export default function Scope1Page() {
   };
 
   // DB 배출계수 우선, 없으면 하드코딩 fallback
-  const fuelType = toFuelType(selectedFacility?.fuelName ?? "LNG");
+  const fuelType = toFuelType(getFuelDbCode(selectedFacility?.fuelName ?? "LNG"));
   const dbFactor = getDbFactor(fuelType);
 
   const monthlyTotals = useMemo(() => {
@@ -378,6 +401,30 @@ export default function Scope1Page() {
     <div className="space-y-4">
       <ScopeHeader year={year} />
 
+      {/* 사업장 선택 */}
+      {worksites.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">사업장:</span>
+          <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-0.5">
+            {worksites.map((ws) => (
+              <button
+                key={ws.id}
+                type="button"
+                onClick={() => { setSelectedWorksiteId(ws.id); setLocalFacilities([]); setLocalActivity({}); }}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  selectedWorksiteId === ws.id
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {ws.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[160px,1fr]">
         <CategorySidebar
           categories={SCOPE1_CATEGORIES}
@@ -407,7 +454,7 @@ export default function Scope1Page() {
 
           {/* ═══ Tab 1: 데이터 입력 ═══ */}
           <TabsContent value="input" className="space-y-6">
-            <div className="grid gap-3 lg:grid-cols-[1fr,440px] items-start">
+            <div className="grid gap-3 lg:grid-cols-[1fr,484px] items-start">
               <SourceInfoCard
                 rows={effectiveFacilities}
                 onRowsChange={setLocalFacilities}
@@ -416,9 +463,19 @@ export default function Scope1Page() {
                 onSelect={setSelectedFacilityId}
                 onSave={handleSaveFacilities}
                 isSaving={saveFacilitiesMutation.isPending}
-                getEmissionFactor={(fuel) => getDbFactor(fuel as any)?.combined}
+                categoryId={selectedCategoryId}
+                worksiteName={worksites.find((w) => w.id === selectedWorksiteId)?.name}
               />
-              <SourceReference activeCategoryId={selectedCategoryId} />
+              <SourceReference
+                activeCategoryId={selectedCategoryId}
+                facilities={effectiveFacilities.map((f) => ({
+                  id: f.id,
+                  name: f.facilityName,
+                  fuel: f.fuelName,
+                  unit: f.unit,
+                  status: f.status,
+                }))}
+              />
             </div>
 
             <MonthlyActivityTable

@@ -51,6 +51,7 @@ interface Scope3SourceInfoCardProps {
   /** 읽기 전용 모드에서 헤더 설명 텍스트 */
   readonlyDescription?: string;
   savedFromDb?: boolean;
+  worksiteName?: string;
 }
 
 export function Scope3SourceInfoCard({
@@ -63,6 +64,7 @@ export function Scope3SourceInfoCard({
   readonly = false,
   readonlyDescription,
   savedFromDb = false,
+  worksiteName,
 }: Scope3SourceInfoCardProps) {
   const [isSaved, setIsSaved] = useState(false);
 
@@ -77,7 +79,7 @@ export function Scope3SourceInfoCard({
   const addRow = () => {
     const newRow: Scope3FacilityRow = {
       id: genId(),
-      facilityName: "",
+      facilityName: worksiteName ?? "",
       activityType: "구입상품·서비스",
       unit: "ton",
       dataMethod: "청구서",

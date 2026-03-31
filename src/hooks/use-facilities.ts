@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 export interface DbFacilityRow {
   id: string;
   scope: number;
+  worksite_id?: string | null;
   category_id?: string;
   facility_name: string;
   fuel_type: string | null;
@@ -12,25 +13,28 @@ export interface DbFacilityRow {
   activity_type: string | null;
   unit: string;
   data_method: string;
+  status: string;
   sort_order: number;
 }
 
-async function fetchFacilities(scope: number, category?: string): Promise<DbFacilityRow[]> {
+async function fetchFacilities(scope: number, category?: string, worksiteId?: string): Promise<DbFacilityRow[]> {
   const url = new URL("/api/facilities", window.location.origin);
   url.searchParams.set("scope", String(scope));
   if (category) url.searchParams.set("category", category);
+  if (worksiteId) url.searchParams.set("worksiteId", worksiteId);
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error("시설 데이터 로드 실패");
   return res.json();
 }
 
-async function saveFacilities(scope: number, category: string, rows: DbFacilityRow[]) {
+async function saveFacilities(scope: number, category: string, rows: DbFacilityRow[], worksiteId?: string) {
   const res = await fetch("/api/facilities", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       scope,
       categoryId: category,
+      worksiteId: worksiteId ?? null,
       rows: rows.map((r, i) => ({
         id: r.id,
         facilityName: r.facility_name,
@@ -39,6 +43,7 @@ async function saveFacilities(scope: number, category: string, rows: DbFacilityR
         activityType: r.activity_type,
         unit: r.unit,
         dataMethod: r.data_method,
+        status: r.status ?? "active",
         sortOrder: i,
       })),
     }),
@@ -47,20 +52,21 @@ async function saveFacilities(scope: number, category: string, rows: DbFacilityR
   return res.json();
 }
 
-export function useFacilities(scope: number, category?: string) {
+export function useFacilities(scope: number, category?: string, worksiteId?: string) {
   return useQuery({
-    queryKey: ["facilities", scope, category],
-    queryFn: () => fetchFacilities(scope, category),
-    staleTime: 1000 * 60 * 5, // 5분
+    queryKey: ["facilities", scope, category, worksiteId],
+    queryFn: () => fetchFacilities(scope, category, worksiteId),
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-export function useSaveFacilities(scope: number, category: string) {
+export function useSaveFacilities(scope: number, category: string, worksiteId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (rows: DbFacilityRow[]) => saveFacilities(scope, category, rows),
+    mutationFn: (rows: DbFacilityRow[]) => saveFacilities(scope, category, rows, worksiteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facilities", scope] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-by-scope"] });
     },
   });
 }
