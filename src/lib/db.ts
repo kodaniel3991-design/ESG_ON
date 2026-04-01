@@ -8,10 +8,6 @@ function createPrismaClient() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
   });
-  // PgBouncer 환경에서 한글 인코딩을 보장하기 위해 연결마다 SET 실행
-  pool.on("connect", (client: any) => {
-    client.query("SET client_encoding TO 'UTF8'");
-  });
   const adapter = new PrismaPg(pool as any);
   return new PrismaClient({
     adapter,
