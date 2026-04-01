@@ -151,7 +151,7 @@ function buildLayout() {
   // 상단: 설정 흐름 (5 Wizard Steps)
   // ────────────────────────────────────
   const setupY = 0;
-  const setupGap = 120;
+  const setupGap = 190;
 
   nodes.push({ id: "label-setup", type: "sectionLabel", position: { x: -120, y: setupY + 8 }, data: { label: "설정 흐름" } });
 
