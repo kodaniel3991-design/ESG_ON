@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useWizardStore, WIZARD_STEPS } from "./wizard-store";
-import { CheckCircle2, ArrowRight, Sparkles, GitBranch, ChevronDown } from "lucide-react";
+import { useWizardStore } from "./wizard-store";
+import { CheckCircle2, ArrowRight, GitBranch, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 
@@ -12,13 +12,6 @@ const DataFlowMap = dynamic(
   { ssr: false }
 );
 
-const STEP_DESCRIPTIONS: Record<number, string> = {
-  1: "회사명, 산업군, 국가, 직원 수를 입력합니다. 산업군 선택 시 AI가 최적 KPI를 자동 추천합니다.",
-  2: "사업장명, 위치, 유형을 등록합니다. Scope 1/2 배출량이 자동 연결됩니다.",
-  3: "Scope 1/2/3 사용 여부와 Scope 3 카테고리를 선택합니다.",
-  4: "GRI, ISSB, CDP 등 공시 기준을 선택하면 KPI가 자동 매핑됩니다.",
-  5: "환경·사회·거버넌스 KPI를 선택합니다. 공시 기준 기반 추천 KPI가 자동으로 표시됩니다.",
-};
 
 function FlowMapSection() {
   const [open, setOpen] = useState(true);
@@ -95,66 +88,6 @@ export default function GettingStartedPage() {
 
       {/* 데이터 흐름도 */}
       <FlowMapSection />
-
-      {/* 단계별 카드 */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {WIZARD_STEPS.map((s) => {
-          const done = state.completedSteps.includes(s.step);
-          const isNext = !done && state.completedSteps.length === s.step - 1;
-          return (
-            <Link
-              key={s.step}
-              href={s.href}
-              className={cn(
-                "group flex flex-col gap-3 rounded-xl border p-5 transition-all hover:shadow-md",
-                done
-                  ? "border-border bg-green-50/50"
-                  : isNext
-                  ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
-                  : "border-border bg-card hover:border-primary/30"
-              )}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold",
-                      done
-                        ? "bg-green-50 text-carbon-success"
-                        : isNext
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {done ? <CheckCircle2 className="h-4 w-4" /> : s.step}
-                  </span>
-                  <div>
-                    <p className="font-semibold text-foreground">{s.title}</p>
-                    <p className="text-[11px] text-muted-foreground">{s.subtitle}</p>
-                  </div>
-                </div>
-                {isNext && (
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                    다음 단계
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {STEP_DESCRIPTIONS[s.step]}
-              </p>
-              {(s.step === 1 || s.step === 4 || s.step === 5) && (
-                <div className="flex items-center gap-1 text-[11px] font-medium text-carbon-success">
-                  <Sparkles className="h-3 w-3" />
-                  AI 자동 추천 포함
-                </div>
-              )}
-              <div className="mt-auto flex items-center justify-end gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                {done ? "다시 편집" : "시작하기"} <ArrowRight className="h-3.5 w-3.5" />
-              </div>
-            </Link>
-          );
-        })}
-      </div>
 
     </div>
   );
