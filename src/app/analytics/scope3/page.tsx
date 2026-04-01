@@ -875,12 +875,12 @@ export default function Scope3Page() {
   }, [isU7, u7SelectedEmployees]);
 
   // 현재 선택된 배출원의 출근일 수 (없으면 기본값 22일)
-  const u7Workdays = u7WorkdaysMap[selectedFacilityId] ?? Array(12).fill(22);
+  const u7Workdays = u7WorkdaysMap[selectedFacilityId] ?? Array(12).fill(0);
   const setU7Workdays = (updater: (prev: number[]) => number[]) => {
     if (!selectedFacilityId) return;
     setU7WorkdaysMap((prev) => ({
       ...prev,
-      [selectedFacilityId]: updater(prev[selectedFacilityId] ?? Array(12).fill(22)),
+      [selectedFacilityId]: updater(prev[selectedFacilityId] ?? Array(12).fill(0)),
     }));
   };
 
