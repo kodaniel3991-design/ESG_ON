@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/chatbot/config — 활성화된 챗봇 설정 (사용자 화면용)
 export async function GET() {
   try {
