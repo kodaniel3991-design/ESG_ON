@@ -1,7 +1,7 @@
  "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { ScopeTabs } from "@/components/scope1/scope-tabs";
@@ -31,7 +31,7 @@ import type {
 import { useFacilities, useSaveFacilities } from "@/hooks/use-facilities";
 import { useActivity, useSaveActivity } from "@/hooks/use-activity";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
-import { saveCommutingWorkDays } from "@/services/api";
+import { saveCommutingWorkDays, getCommutingWorkDays } from "@/services/api";
 import type { HistoricalMonthly } from "@/components/scope1/validation-insights-card";
 import { useEmployees } from "@/hooks/use-employees";
 import { useWorksites } from "@/hooks/use-worksites";
@@ -919,6 +919,13 @@ export default function Scope3Page() {
   const { data: dbActivityValues } = useActivity(activityFacilityId, year);
   const { data: auditLogs = [] } = useAuditLogs(activityFacilityId, year);
 
+  // u7: 출근일수 DB 로드
+  const { data: dbCommutingWorkDays } = useQuery({
+    queryKey: ["commuting-work-days", year],
+    queryFn: () => getCommutingWorkDays(year),
+    enabled: isU7,
+  });
+
   // 시설 전환 시 활동량 쿼리 강제 갱신
   useEffect(() => {
     if (activityFacilityId) {
@@ -940,22 +947,28 @@ export default function Scope3Page() {
     return entries.filter((h) => h.values.some((v) => v > 0));
   }, [prevYear1, prevYear2, prevYear1Activity, prevYear2Activity]);
 
-  // DB 활동량을 로컬 상태에 반영 (u7=출근일 수, 일반=활동량)
+  // DB 활동량을 로컬 상태에 반영 (일반 카테고리)
   useEffect(() => {
-    if (!selectedFacilityId || !dbActivityValues) return;
-    if (isU7) {
-      setU7WorkdaysMap((prev) => {
-        // 로컬에 해당 시설 데이터가 없으면 DB에서 복원
-        if (prev[selectedFacilityId] && prev[selectedFacilityId].some((v) => v !== 0)) return prev;
-        return { ...prev, [selectedFacilityId]: dbActivityValues };
-      });
-    } else {
-      setScope3LocalActivity((prev) => {
-        if (prev[selectedFacilityId] && prev[selectedFacilityId].some((v) => v !== 0)) return prev;
-        return { ...prev, [selectedFacilityId]: dbActivityValues };
-      });
-    }
+    if (!selectedFacilityId || !dbActivityValues || isU7) return;
+    setScope3LocalActivity((prev) => {
+      if (prev[selectedFacilityId] && prev[selectedFacilityId].some((v) => v !== 0)) return prev;
+      return { ...prev, [selectedFacilityId]: dbActivityValues };
+    });
   }, [isU7, selectedFacilityId, dbActivityValues]);
+
+  // u7: DB 출근일수를 로컬 상태에 반영 (직원별 데이터 → 시설별로 매핑)
+  useEffect(() => {
+    if (!isU7 || !dbCommutingWorkDays?.workDays || !selectedFacilityId) return;
+    // 이미 로컬에 데이터가 있으면 덮어쓰지 않음
+    setU7WorkdaysMap((prev) => {
+      if (prev[selectedFacilityId] && prev[selectedFacilityId].some((v) => v !== 0)) return prev;
+      // 선택된 배출원에 매핑된 첫 번째 직원의 출근일수를 사용
+      const empIds = u7SelectedEmployees.map((e) => e.id);
+      const firstEmpData = empIds.find((id) => dbCommutingWorkDays.workDays[id]?.some((v) => v > 0));
+      if (!firstEmpData) return prev;
+      return { ...prev, [selectedFacilityId]: [...dbCommutingWorkDays.workDays[firstEmpData]] };
+    });
+  }, [isU7, selectedFacilityId, dbCommutingWorkDays, u7SelectedEmployees]);
   const [localScope3Facilities, setLocalScope3Facilities] = useState<Scope3FacilityRow[]>([]);
   // 일반 카테고리 활동량 로컬 상태 (시설 ID 기반)
   const [scope3LocalActivity, setScope3LocalActivity] = useState<Record<string, number[]>>({});
@@ -1131,7 +1144,7 @@ export default function Scope3Page() {
           workDays[emp.id] = u7Workdays;
         }
         await saveCommutingWorkDays({ year, workDays });
-        setU7WorkdaysMap((prev) => { const next = { ...prev }; delete next[selectedFacilityId]; return next; });
+        queryClient.invalidateQueries({ queryKey: ["commuting-work-days", year] });
         toast.success("저장되었습니다.");
       } catch {
         toast.error("저장에 실패했습니다.");
