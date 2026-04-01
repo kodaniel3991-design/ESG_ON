@@ -138,12 +138,25 @@ export default function KpiPage() {
   };
 
   // hydrated 후 실행 — KPI가 비어있으면 추천 KPI를 기본 선택
+  // localStorage에서 직접 읽어 closure 지연 문제 방지
   useEffect(() => {
     if (!hydrated) return;
     if (kpi.environmental.length > 0 || kpi.social.length > 0 || kpi.governance.length > 0) return;
 
-    const rec = getKpiRecommendationsByFrameworks(state.framework.selected);
-    const industryRec = state.organization.industry ? getAiRecommendation(state.organization.industry) : null;
+    // closure의 state가 아직 반영 안 될 수 있으므로 localStorage에서 직접 읽기
+    let frameworks = state.framework.selected;
+    let industry = state.organization.industry;
+    try {
+      const saved = localStorage.getItem("esg_setup_wizard");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        frameworks = parsed.framework?.selected ?? frameworks;
+        industry = parsed.organization?.industry ?? industry;
+      }
+    } catch { /* noop */ }
+
+    const rec = getKpiRecommendationsByFrameworks(frameworks);
+    const industryRec = industry ? getAiRecommendation(industry) : null;
 
     const merged = {
       environmental: rec.environmental.length > 0 ? rec.environmental : (industryRec?.kpi.environmental ?? []),
