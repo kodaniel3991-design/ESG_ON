@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,8 +22,13 @@ export default function RolesPage() {
 
   const saveMutation = useMutation({
     mutationFn: saveRoles,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["settings-roles"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings-roles"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("처리에 실패했습니다.");
+    },
   });
 
   const [list, setList] = useState<RoleItem[]>([]);

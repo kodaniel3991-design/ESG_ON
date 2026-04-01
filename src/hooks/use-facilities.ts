@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface DbFacilityRow {
   id: string;
@@ -67,6 +68,10 @@ export function useSaveFacilities(scope: number, category: string, worksiteId?: 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facilities", scope] });
       queryClient.invalidateQueries({ queryKey: ["kpi-by-scope"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }

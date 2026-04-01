@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface AttachmentMeta {
   id: number;
@@ -43,6 +44,10 @@ export function useUploadAttachment() {
     },
     onSuccess: (_, { facilityId, year }) => {
       queryClient.invalidateQueries({ queryKey: ["attachments", facilityId, year] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }
@@ -56,6 +61,10 @@ export function useDeleteAttachment() {
     },
     onSuccess: (_, { facilityId, year }) => {
       queryClient.invalidateQueries({ queryKey: ["attachments", facilityId, year] });
+      toast.success("삭제되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 async function fetchActivity(facilityId: string, year: string): Promise<number[]> {
   if (!facilityId) return Array(12).fill(0);
@@ -36,6 +37,10 @@ export function useSaveActivity() {
       saveActivity(facilityId, year, values),
     onSuccess: (_, { facilityId, year }) => {
       queryClient.invalidateQueries({ queryKey: ["activity", facilityId, year] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }

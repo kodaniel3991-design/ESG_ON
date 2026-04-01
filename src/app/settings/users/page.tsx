@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardActionBar } from "@/components/ui/card-action-bar";
@@ -42,15 +43,33 @@ export default function SettingsUsersPage() {
 
   const inviteMutation = useMutation({
     mutationFn: inviteUser,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings-users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings-users"] });
+      toast.success("초대되었습니다.");
+    },
+    onError: () => {
+      toast.error("처리에 실패했습니다.");
+    },
   });
   const upsertMutation = useMutation({
     mutationFn: upsertUser,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings-users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings-users"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("처리에 실패했습니다.");
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings-users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings-users"] });
+      toast.success("삭제되었습니다.");
+    },
+    onError: () => {
+      toast.error("처리에 실패했습니다.");
+    },
   });
 
   const [query, setQueryState] = useState(() =>

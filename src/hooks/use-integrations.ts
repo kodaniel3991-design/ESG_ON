@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface IntegrationSource {
   id: number;
@@ -72,7 +73,13 @@ export function useCreateIntegration() {
       if (!res.ok) throw new Error("등록 실패");
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["integrations"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["integrations"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
+    },
   });
 }
 
@@ -81,6 +88,12 @@ export function useTestConnection() {
     mutationFn: async (sourceId: number): Promise<{ ok: boolean; message: string }> => {
       const res = await fetch(`/api/integrations/${sourceId}?action=test`);
       return res.json();
+    },
+    onSuccess: () => {
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }
@@ -91,6 +104,12 @@ export function usePreviewData() {
       const res = await fetch(`/api/integrations/${sourceId}?action=preview&year=${year}`);
       if (!res.ok) throw new Error("미리보기 실패");
       return res.json();
+    },
+    onSuccess: () => {
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }
@@ -110,6 +129,10 @@ export function useSyncIntegration() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["integrations"] });
       qc.invalidateQueries({ queryKey: ["activity"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 }

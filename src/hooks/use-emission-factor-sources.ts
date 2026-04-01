@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface EmissionFactorSourceRow {
   id: number;
@@ -58,7 +59,13 @@ export function useCreateEmissionFactorSource() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["emission-factor-sources"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["emission-factor-sources"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
+    },
   });
 }
 
@@ -74,7 +81,13 @@ export function useUpdateEmissionFactorSource() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["emission-factor-sources"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["emission-factor-sources"] });
+      toast.success("저장되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
+    },
   });
 }
 
@@ -86,6 +99,12 @@ export function useDeleteEmissionFactorSource() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["emission-factor-sources"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["emission-factor-sources"] });
+      toast.success("삭제되었습니다.");
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
+    },
   });
 }
