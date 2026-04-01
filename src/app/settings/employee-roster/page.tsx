@@ -134,8 +134,11 @@ export default function SettingsEmployeeRosterPage() {
 
   const [list, setList] = useState<EmployeeRosterItem[]>([]);
   const listRef = useRef(list);
+  const uploadedRef = useRef(false);
   useEffect(() => { listRef.current = list; }, [list]);
   useEffect(() => {
+    // 업로드 직후에는 DB 데이터로 덮어쓰지 않음
+    if (uploadedRef.current) { uploadedRef.current = false; return; }
     if (roster) setList((roster as EmployeeRosterItem[]).map((e) => ({ ...e })));
   }, [roster]);
 
@@ -512,6 +515,7 @@ export default function SettingsEmployeeRosterPage() {
         const currentItems = newItems.filter((e) => (e.worksiteId ?? null) === selectedWorksiteId);
         const otherItems = newItems.filter((e) => (e.worksiteId ?? null) !== selectedWorksiteId);
         // 기존 목록을 교체 (중복 방지)
+        uploadedRef.current = true;
         setList(currentItems);
         setPendingOtherWs(otherItems);
 
