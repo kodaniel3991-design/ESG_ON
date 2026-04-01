@@ -256,8 +256,22 @@ model Employee {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at")
   worksite               Worksite? @relation(fields: [worksiteId], references: [id])
+  commutingWorkDays      CommutingWorkDay[]
 
   @@map("employees")
+}
+
+model CommutingWorkDay {
+  id         Int    @id @default(autoincrement())
+  employeeId String @map("employee_id") @db.VarChar(50)
+  year       Int
+  month      Int    // 1~12
+  days       Int    @default(0)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, year, month])
+  @@map("commuting_work_days")
 }
 
 model KpiMaster {

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { cn, formatNumber } from "@/lib/utils";
 import {
   getEmployeeRoster,
@@ -83,8 +84,12 @@ export function Scope3CommutingInput({
       saveCommutingWorkDays({ year: data.year, workDays: data.workDays }),
     onSuccess: (_, { year: y }) => {
       queryClient.invalidateQueries({ queryKey: ["commuting-work-days", y] });
+      toast.success("저장되었습니다.");
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    },
+    onError: () => {
+      toast.error("저장에 실패했습니다.");
     },
   });
 

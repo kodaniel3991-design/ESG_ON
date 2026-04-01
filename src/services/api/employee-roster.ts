@@ -29,17 +29,15 @@ export async function saveEmployeeRoster(
   });
 }
 
-// ── 근무일수 (기존 로컬 스토어 유지) ──────────────────────────
-
-const commutingStore: Record<string, CommutingWorkDaysByYear> = {};
+// ── 근무일수 ──────────────────────────────────────────────────
 
 export async function getCommutingWorkDays(
   year: string
 ): Promise<CommutingWorkDaysByYear> {
   return apiCall(async () => {
-    const existing = commutingStore[year];
-    if (existing) return { ...existing, workDays: { ...existing.workDays } };
-    return { year, workDays: {} };
+    const res = await fetch(`/api/commuting-work-days?year=${encodeURIComponent(year)}`);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   });
 }
 
@@ -47,9 +45,11 @@ export async function saveCommutingWorkDays(
   data: CommutingWorkDaysByYear
 ): Promise<void> {
   return apiCall(async () => {
-    commutingStore[data.year] = {
-      year: data.year,
-      workDays: JSON.parse(JSON.stringify(data.workDays)),
-    };
+    const res = await fetch("/api/commuting-work-days", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year: data.year, workDays: data.workDays }),
+    });
+    if (!res.ok) throw new Error(await res.text());
   });
 }
