@@ -24,7 +24,8 @@ export async function GET() {
       confirmApiUrl: config.confirmApiUrl,
       position: config.position,
     });
-  } catch {
-    return NextResponse.json({ enabled: false });
+  } catch (err: any) {
+    console.error("[GET /api/chatbot/config]", err);
+    return NextResponse.json({ enabled: false, error: err?.message });
   }
 }
