@@ -941,12 +941,13 @@ export default function Scope3Page() {
     if (!selectedFacilityId || !dbActivityValues) return;
     if (isU7) {
       setU7WorkdaysMap((prev) => {
-        if (prev[selectedFacilityId]) return prev;
+        // 로컬에 해당 시설 데이터가 없으면 DB에서 복원
+        if (prev[selectedFacilityId] && prev[selectedFacilityId].some((v) => v !== 0)) return prev;
         return { ...prev, [selectedFacilityId]: dbActivityValues };
       });
     } else {
       setScope3LocalActivity((prev) => {
-        if (prev[selectedFacilityId]) return prev;
+        if (prev[selectedFacilityId] && prev[selectedFacilityId].some((v) => v !== 0)) return prev;
         return { ...prev, [selectedFacilityId]: dbActivityValues };
       });
     }
