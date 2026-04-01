@@ -11,6 +11,7 @@ import {
   type KpiItem,
 } from "@/lib/ai-recommendations";
 import { Sparkles, ArrowLeft, ArrowRight, Leaf, Users, Scale, Check, BarChart3 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 /* ── KPI 항목별 데이터 소스 매핑 ── */
@@ -202,14 +203,21 @@ export default function KpiPage() {
       });
     });
 
-    await fetch("/api/kpi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "setup-kpis", items }),
-    });
+    try {
+      const res = await fetch("/api/kpi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setup-kpis", items }),
+      });
 
-    markStepComplete(5);
-    router.push("/getting-started");
+      if (!res.ok) throw new Error("KPI 저장 실패");
+
+      markStepComplete(5);
+      toast.success(`ESG 초기 설정이 완료되었습니다! (${totalSelected}개 KPI 선택)`);
+      router.push("/getting-started");
+    } catch {
+      toast.error("KPI 저장 중 오류가 발생했습니다. 다시 시도해 주세요.");
+    }
   };
 
   const totalSelected = kpi.environmental.length + kpi.social.length + kpi.governance.length;
