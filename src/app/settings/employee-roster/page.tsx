@@ -608,9 +608,9 @@ export default function SettingsEmployeeRosterPage() {
                     key={ws.id}
                     type="button"
                     onClick={() => setSelectedWorksiteId(ws.id)}
-                    className={`relative px-4 py-2 text-xs font-medium transition-colors ${
+                    className={`relative rounded-md px-4 py-2 text-xs font-medium transition-colors ${
                       selectedWorksiteId === ws.id
-                        ? "border-b-2 border-primary text-primary"
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
