@@ -12,6 +12,7 @@ import { KpiSummaryCards } from "@/components/kpi/kpi-summary-cards";
 import { KpiListTable } from "@/components/kpi/kpi-list-table";
 import { KpiDetailDrawer } from "@/components/kpi/kpi-detail-drawer";
 import { KpiTargetModal } from "@/components/kpi/kpi-target-modal";
+import { KpiFlowMap } from "@/components/kpi/kpi-flow-map";
 
 import type { KpiManagementItem, KpiCategory } from "@/types";
 
@@ -127,6 +128,9 @@ export default function KPIDashboardPage() {
       data-page="kpi-dashboard"
       headerChildren={<KpiSubNav />}
     >
+      {/* KPI 관리 흐름도 */}
+      <KpiFlowMap />
+
       {/* 진행 현황 */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="mb-3 flex items-center justify-between">
