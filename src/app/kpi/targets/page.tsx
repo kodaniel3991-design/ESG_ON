@@ -12,13 +12,13 @@ import { ChevronDown, ChevronUp, Info, Sparkles, TrendingDown } from "lucide-rea
 import { cn } from "@/lib/utils";
 
 const inputClass =
-  "h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 text-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring text-right";
+  "h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-2 py-1 text-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 function genId() {
   return "tgt-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
 }
 
-interface KpiMasterRow { id: string; esgDomain: string; code: string; name: string; category: string; unit: string; }
+interface KpiMasterRow { id: string; esgDomain: string; code: string; name: string; description: string; category: string; unit: string; }
 interface TargetRow { id: string; kpiId: string; kpiName: string; kpiCode: string; category: string; unit: string; period: string; targetValue: number; }
 
 const DOMAIN_LABEL: Record<string, string> = { environment: "(E)환경", social: "(S)사회", governance: "(G)거버넌스" };
@@ -131,6 +131,19 @@ export default function KpiTargetsPage() {
               <p className="text-sm text-muted-foreground">등록된 KPI가 없습니다.</p>
             ) : (
               <div className="space-y-0">
+                {/* 컬럼 헤더 */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b-2 border-border text-[10px] font-semibold text-muted-foreground">
+                  <span className="w-6 shrink-0 text-center">#</span>
+                  <span style={{ width: "20%" }} className="shrink-0">지표명</span>
+                  <span style={{ width: "20%" }} className="shrink-0">설명</span>
+                  <span className="w-20 shrink-0">구분</span>
+                  <span style={{ width: "15%" }} className="shrink-0">단위</span>
+                  <span className="w-24 shrink-0 text-right">전년 실적</span>
+                  <span className="w-28 shrink-0 text-center">목표값</span>
+                  <span className="w-20 shrink-0 text-right">전년 대비</span>
+                  <span className="w-3.5" />
+                  <span className="w-3.5" />
+                </div>
                 {Object.entries(grouped).map(([domain, rows]) => (
                   <React.Fragment key={`group-${domain}`}>
                     <div className="bg-muted/50 px-3 py-2 text-xs font-bold text-foreground border-b border-border">
@@ -150,22 +163,49 @@ export default function KpiTargetsPage() {
                             className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors"
                             onClick={() => setExpandedId(isExpanded ? null : m.id)}
                           >
-                            <span className="w-8 text-center text-xs text-muted-foreground">{idx + 1}</span>
-                            <span className="flex-1 text-xs font-medium">{m.name}</span>
-                            <span className="w-24 text-xs text-muted-foreground">{m.category}</span>
-                            <span className="w-24 text-xs text-muted-foreground">{m.unit || "—"}</span>
-                            {prevValue != null && (
-                              <span className="w-24 text-xs text-muted-foreground text-right">전년 {prevValue.toLocaleString()}</span>
-                            )}
-                            <div className="w-32" onClick={(e) => e.stopPropagation()}>
+                            <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">{idx + 1}</span>
+                            <span style={{ width: "20%" }} className="shrink-0 text-xs font-medium truncate">{m.name}</span>
+                            <span style={{ width: "20%" }} className="shrink-0 text-xs text-muted-foreground truncate">{m.description || "—"}</span>
+                            <span className="w-20 shrink-0 text-xs text-muted-foreground truncate">{m.category}</span>
+                            <span style={{ width: "15%" }} className="shrink-0 text-xs text-muted-foreground">{m.unit || "—"}</span>
+                            <span className="w-24 shrink-0 text-xs text-muted-foreground text-right">
+                              {prevValue != null ? prevValue.toLocaleString() : "—"}
+                            </span>
+                            <div className="w-28 shrink-0" onClick={(e) => e.stopPropagation()}>
                               {isEditing ? (
-                                <input type="number" value={values[m.id] ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [m.id]: e.target.value }))} placeholder="목표값" className={inputClass} />
+                                (() => {
+                                  const defaultReduction = benchmark?.suggestedReductions?.[1] ?? 5;
+                                  const suggested = prevValue ? Math.round(prevValue * (1 - defaultReduction / 100) * 1000) / 1000 : null;
+                                  return (
+                                    <input
+                                      type="number" inputMode="decimal" step="any"
+                                      value={values[m.id] ?? ""}
+                                      onChange={(e) => { const v = e.target.value; if (v === "" || /^-?\d*\.?\d*$/.test(v)) setValues((prev) => ({ ...prev, [m.id]: v })); }}
+                                      onFocus={(e) => { if (!values[m.id] && suggested) { setValues((prev) => ({ ...prev, [m.id]: String(suggested) })); e.target.select(); } }}
+                                      placeholder={suggested ? `제안: ${suggested.toLocaleString()} (-${defaultReduction}%)` : "숫자 입력"}
+                                      className={inputClass}
+                                    />
+                                  );
+                                })()
                               ) : (
                                 <span className={`block text-right text-xs tabular-nums ${hasTarget ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                                   {hasTarget ? Number(values[m.id]).toLocaleString() : "—"}
                                 </span>
                               )}
                             </div>
+                            <span className="w-20 shrink-0 text-right text-xs tabular-nums">
+                              {(() => {
+                                const targetVal = values[m.id] ? parseFloat(values[m.id]) : null;
+                                if (prevValue == null || targetVal == null || prevValue === 0) return <span className="text-muted-foreground">—</span>;
+                                const pct = ((targetVal - prevValue) / prevValue) * 100;
+                                const sign = pct > 0 ? "+" : "";
+                                return (
+                                  <span className={cn("font-semibold", pct < 0 ? "text-green-600" : pct > 0 ? "text-destructive" : "text-muted-foreground")}>
+                                    {sign}{pct.toFixed(1)}%
+                                  </span>
+                                );
+                              })()}
+                            </span>
                             {benchmark ? (
                               <Info className="h-3.5 w-3.5 text-primary shrink-0" />
                             ) : (
