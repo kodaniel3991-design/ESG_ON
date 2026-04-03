@@ -128,7 +128,6 @@ export const NAV_ITEMS: NavItem[] = [
         children: [
           link("/materiality", "중대성 평가"),
           link("/kpi/dashboard", "KPI 관리"),
-          link("/kpi/targets", "목표 관리 (Targets)"),
           link("/reports/mapping", "공시 기준 관리"),
           link("/settings/organization", "ESG 정책 및 조직"),
           link("/esg/tasks", "과제 / 실행과제 관리"),
