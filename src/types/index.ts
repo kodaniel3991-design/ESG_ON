@@ -732,10 +732,14 @@ export interface MaterialityIssue {
   kpiConnectionStatus: "none" | "partial" | "full";
   /** AI 추천 우선순위 (1=최상) */
   aiRecommendRank?: number;
-  /** 중대성 매트릭스 x (영향도) */
-  impactScore: number;
-  /** 중대성 매트릭스 y (관련자 중요도) */
-  stakeholderScore: number;
+  /** KPI 카탈로그 group명 매핑 */
+  kpiGroup?: string;
+  /** 이중 중대성: 영향 중대성 (환경·사회 영향, 1~5) */
+  impactScore: number | null;
+  /** 이중 중대성: 재무 중대성 (기업 재무 리스크/기회, 1~5) */
+  financialScore: number | null;
+  /** @deprecated → financialScore */
+  stakeholderScore?: number | null;
   /** 보고서 연결 수 */
   reportLinkedCount: number;
   updatedAt: string;

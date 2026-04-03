@@ -9,12 +9,12 @@ import type {
 } from "@/types";
 
 export const mockMaterialityIssues: MaterialityIssue[] = [
-  { id: "mi1", code: "ENV-01", name: "탄소 배출 및 기후변화", dimension: "environment", expertScore: 5, benchmarkScore: 5, kpiLinkedCount: 4, kpiConnectionStatus: "full", aiRecommendRank: 1, impactScore: 4.5, stakeholderScore: 4.8, reportLinkedCount: 2, updatedAt: "2024-11-01" },
-  { id: "mi2", code: "ENV-02", name: "에너지 효율 및 재생에너지", dimension: "environment", expertScore: 4, benchmarkScore: 4, kpiLinkedCount: 3, kpiConnectionStatus: "full", aiRecommendRank: 2, impactScore: 4.2, stakeholderScore: 4.0, reportLinkedCount: 1, updatedAt: "2024-11-01" },
-  { id: "mi3", code: "SOC-01", name: "인권 및 노동 안전", dimension: "social", expertScore: 4, benchmarkScore: 3, kpiLinkedCount: 2, kpiConnectionStatus: "partial", aiRecommendRank: 3, impactScore: 3.8, stakeholderScore: 4.2, reportLinkedCount: 1, updatedAt: "2024-10-28" },
-  { id: "mi4", code: "SOC-02", name: "인재 육성 및 다양성", dimension: "social", expertScore: 3, benchmarkScore: 4, kpiLinkedCount: 2, kpiConnectionStatus: "partial", impactScore: 3.5, stakeholderScore: 3.8, reportLinkedCount: 0, updatedAt: "2024-10-28" },
-  { id: "mi5", code: "GOV-01", name: "이사회 독립성 및 감사", dimension: "governance", expertScore: 5, benchmarkScore: 5, kpiLinkedCount: 2, kpiConnectionStatus: "full", aiRecommendRank: 4, impactScore: 4.0, stakeholderScore: 4.5, reportLinkedCount: 2, updatedAt: "2024-10-30" },
-  { id: "mi6", code: "GOV-02", name: "윤리 경영 및 준법", dimension: "governance", expertScore: 4, benchmarkScore: 4, kpiLinkedCount: 1, kpiConnectionStatus: "partial", impactScore: 3.8, stakeholderScore: 4.0, reportLinkedCount: 1, updatedAt: "2024-10-30" },
+  { id: "mi1", code: "ENV-01", name: "탄소 배출 및 기후변화", dimension: "environment", expertScore: 5, benchmarkScore: 5, kpiLinkedCount: 4, kpiConnectionStatus: "full", aiRecommendRank: 1, impactScore: 4.5, financialScore: 4.8, reportLinkedCount: 2, updatedAt: "2024-11-01" },
+  { id: "mi2", code: "ENV-02", name: "에너지 효율 및 재생에너지", dimension: "environment", expertScore: 4, benchmarkScore: 4, kpiLinkedCount: 3, kpiConnectionStatus: "full", aiRecommendRank: 2, impactScore: 4.2, financialScore: 4.0, reportLinkedCount: 1, updatedAt: "2024-11-01" },
+  { id: "mi3", code: "SOC-01", name: "인권 및 노동 안전", dimension: "social", expertScore: 4, benchmarkScore: 3, kpiLinkedCount: 2, kpiConnectionStatus: "partial", aiRecommendRank: 3, impactScore: 3.8, financialScore: 4.2, reportLinkedCount: 1, updatedAt: "2024-10-28" },
+  { id: "mi4", code: "SOC-02", name: "인재 육성 및 다양성", dimension: "social", expertScore: 3, benchmarkScore: 4, kpiLinkedCount: 2, kpiConnectionStatus: "partial", impactScore: 3.5, financialScore: 3.8, reportLinkedCount: 0, updatedAt: "2024-10-28" },
+  { id: "mi5", code: "GOV-01", name: "이사회 독립성 및 감사", dimension: "governance", expertScore: 5, benchmarkScore: 5, kpiLinkedCount: 2, kpiConnectionStatus: "full", aiRecommendRank: 4, impactScore: 4.0, financialScore: 4.5, reportLinkedCount: 2, updatedAt: "2024-10-30" },
+  { id: "mi6", code: "GOV-02", name: "윤리 경영 및 준법", dimension: "governance", expertScore: 4, benchmarkScore: 4, kpiLinkedCount: 1, kpiConnectionStatus: "partial", impactScore: 3.8, financialScore: 4.0, reportLinkedCount: 1, updatedAt: "2024-10-30" },
 ];
 
 export const mockMaterialityAiRecommendations: MaterialityAiRecommendation[] = [
@@ -23,13 +23,15 @@ export const mockMaterialityAiRecommendations: MaterialityAiRecommendation[] = [
   { id: "ar3", issueId: "mi3", issueName: "인권 및 노동 안전", reason: "공급망 이슈와 ESG 등급에 직접 영향", suggestedPriority: 3, confidence: 0.82, createdAt: "2024-11-01T10:00:00" },
 ];
 
-export const mockMaterialityMatrix: MaterialityMatrixPoint[] = mockMaterialityIssues.map((i) => ({
-  issueId: i.id,
-  issueName: i.name,
-  dimension: i.dimension,
-  x: i.impactScore,
-  y: i.stakeholderScore,
-}));
+export const mockMaterialityMatrix: MaterialityMatrixPoint[] = mockMaterialityIssues
+  .filter((i) => i.impactScore != null && i.financialScore != null)
+  .map((i) => ({
+    issueId: i.id,
+    issueName: i.name,
+    dimension: i.dimension,
+    x: i.impactScore!,
+    y: i.financialScore!,
+  }));
 
 export const mockMaterialityRanking: MaterialityIssueRanking[] = [
   { rank: 1, issueId: "mi1", issueName: "탄소 배출 및 기후변화", dimension: "environment", compositeScore: 4.72, expertScore: 5, benchmarkScore: 5, kpiLinkedCount: 4 },

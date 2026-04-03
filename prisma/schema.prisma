@@ -494,11 +494,17 @@ model MaterialityIssue {
   name                String        @db.VarChar(255)
   dimension           String        @db.VarChar(50)
   description         String?
+  /// KPI 카탈로그의 group명과 매핑 (예: "탄소/기후", "에너지")
+  kpiGroup            String?       @map("kpi_group") @db.VarChar(100)
   expertScore         Decimal       @default(3.0) @map("expert_score") @db.Decimal(3, 2)
   benchmarkScore      Decimal       @default(3.0) @map("benchmark_score") @db.Decimal(3, 2)
   kpiLinkedCount      Int           @default(0) @map("kpi_linked_count")
   kpiConnectionStatus String?       @map("kpi_connection_status") @db.VarChar(50)
+  /// 이중 중대성: 영향 중대성 (환경·사회에 미치는 영향, 1~5)
   impactScore         Decimal?      @map("impact_score") @db.Decimal(4, 2)
+  /// 이중 중대성: 재무 중대성 (기업 재무에 미치는 리스크/기회, 1~5)
+  financialScore      Decimal?      @map("financial_score") @db.Decimal(4, 2)
+  /// @deprecated stakeholderScore → financialScore로 이전
   stakeholderScore    Decimal?      @map("stakeholder_score") @db.Decimal(4, 2)
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @default(now()) @updatedAt @map("updated_at")

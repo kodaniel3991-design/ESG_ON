@@ -127,6 +127,7 @@ export const NAV_ITEMS: NavItem[] = [
         label: "",
         children: [
           link("/materiality", "중대성 평가"),
+          link("/materiality/flow", "평가 흐름도"),
           link("/materiality/issues", "ESG 이슈 관리"),
           link("/kpi/dashboard", "KPI 관리"),
           link("/kpi/targets", "목표 관리 (Targets)"),
@@ -271,6 +272,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   "/esg/calendar": "평가 주기 / 운영 캘린더",
   "/kpi/history": "KPI 이력 관리",
   "/materiality": "중대성 평가",
+  "/materiality/flow": "평가 흐름도",
   "/materiality/issues": "ESG 이슈 관리",
   "/settings/organization": "ESG 정책 및 조직",
   "/analytics": "분석",

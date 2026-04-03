@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthOrg, AuthError } from "@/lib/auth";
 
-// GET /api/materiality?type=issues|matrix
+// GET /api/materiality?type=issues|matrix|generate
 export async function GET(req: NextRequest) {
   try {
     const { organizationId } = await getAuthOrg();
@@ -14,12 +14,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         issues.map((r) => ({
           id: r.id, code: r.code, name: r.name, dimension: r.dimension,
-          description: r.description,
+          description: r.description, kpiGroup: r.kpiGroup,
           expertScore: parseFloat(String(r.expertScore)),
           benchmarkScore: parseFloat(String(r.benchmarkScore)),
           kpiLinkedCount: r.kpiLinkedCount,
           kpiConnectionStatus: r.kpiConnectionStatus,
           impactScore: r.impactScore != null ? parseFloat(String(r.impactScore)) : null,
+          financialScore: r.financialScore != null ? parseFloat(String(r.financialScore)) : null,
           stakeholderScore: r.stakeholderScore != null ? parseFloat(String(r.stakeholderScore)) : null,
         }))
       );
@@ -27,15 +28,62 @@ export async function GET(req: NextRequest) {
 
     if (type === "matrix") {
       const issues = await prisma.materialityIssue.findMany({
-        where: { ...orgFilter, impactScore: { not: null }, stakeholderScore: { not: null } },
+        where: { ...orgFilter, impactScore: { not: null }, financialScore: { not: null } },
       });
       return NextResponse.json(
         issues.map((r) => ({
-          issueId: r.id, issueName: r.name,
+          issueId: r.id, issueName: r.name, dimension: r.dimension,
           x: parseFloat(String(r.impactScore)),
-          y: parseFloat(String(r.stakeholderScore)),
+          y: parseFloat(String(r.financialScore)),
         }))
       );
+    }
+
+    // KPI 카탈로그 그룹에서 이슈 자동 생성
+    if (type === "generate") {
+      const domainMap: Record<string, string> = { environmental: "environment", social: "social", governance: "governance" };
+      const catalog = await prisma.kpiCatalog.findMany({
+        where: { active: true },
+        select: { esgDomain: true, grp: true },
+        distinct: ["esgDomain", "grp"],
+        orderBy: [{ esgDomain: "asc" }, { sortOrder: "asc" }],
+      });
+
+      let idx = 0;
+      for (const item of catalog) {
+        const dimension = domainMap[item.esgDomain] ?? "environment";
+        const prefix = dimension === "environment" ? "ENV" : dimension === "social" ? "SOC" : "GOV";
+        const code = `${prefix}-${String(idx + 1).padStart(2, "0")}`;
+        const id = `mat-${organizationId}-${code}`;
+
+        await prisma.materialityIssue.upsert({
+          where: { id },
+          update: { name: item.grp, dimension, kpiGroup: item.grp },
+          create: {
+            id, organizationId, code, name: item.grp, dimension, kpiGroup: item.grp,
+            expertScore: 3.0, benchmarkScore: 3.0,
+          },
+        });
+        idx++;
+      }
+
+      // KPI 연결 수 업데이트
+      const issues = await prisma.materialityIssue.findMany({
+        where: { organizationId, kpiGroup: { not: null } },
+      });
+      for (const issue of issues) {
+        const domain = issue.dimension === "environment" ? "environmental"
+          : issue.dimension === "social" ? "social" : "governance";
+        const count = await prisma.kpiCatalog.count({
+          where: { esgDomain: domain, grp: issue.kpiGroup!, active: true },
+        });
+        await prisma.materialityIssue.update({
+          where: { id: issue.id },
+          data: { kpiLinkedCount: count, kpiConnectionStatus: count > 0 ? "full" : "none" },
+        });
+      }
+
+      return NextResponse.json({ ok: true, count: idx });
     }
 
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -46,7 +94,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/materiality — save issues
+// POST /api/materiality — save issues (평가 점수 저장)
 export async function POST(req: NextRequest) {
   try {
     const { organizationId } = await getAuthOrg();
@@ -59,17 +107,21 @@ export async function POST(req: NextRequest) {
         update: {
           code: item.code, name: item.name, dimension: item.dimension,
           description: item.description ?? null,
+          kpiGroup: item.kpiGroup ?? null,
           expertScore: item.expertScore, benchmarkScore: item.benchmarkScore,
           kpiLinkedCount: item.kpiLinkedCount ?? 0,
-          impactScore: item.impactScore ?? null, stakeholderScore: item.stakeholderScore ?? null,
+          impactScore: item.impactScore ?? null,
+          financialScore: item.financialScore ?? null,
         },
         create: {
           id: item.id, organizationId,
           code: item.code, name: item.name, dimension: item.dimension,
           description: item.description ?? null,
-          expertScore: item.expertScore, benchmarkScore: item.benchmarkScore,
+          kpiGroup: item.kpiGroup ?? null,
+          expertScore: item.expertScore ?? 3.0, benchmarkScore: item.benchmarkScore ?? 3.0,
           kpiLinkedCount: item.kpiLinkedCount ?? 0,
-          impactScore: item.impactScore ?? null, stakeholderScore: item.stakeholderScore ?? null,
+          impactScore: item.impactScore ?? null,
+          financialScore: item.financialScore ?? null,
         },
       });
     }
