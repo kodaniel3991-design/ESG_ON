@@ -18,7 +18,7 @@ function genId() {
   return "tgt-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
 }
 
-interface KpiMasterRow { id: string; esgDomain: string; code: string; name: string; description: string; category: string; unit: string; }
+interface KpiMasterRow { id: string; esgDomain: string; code: string; name: string; description: string; category: string; unit: string; managementLevel?: string; }
 interface TargetRow { id: string; kpiId: string; kpiName: string; kpiCode: string; category: string; unit: string; period: string; targetValue: number; }
 
 const DOMAIN_LABEL: Record<string, string> = { environment: "(E)환경", social: "(S)사회", governance: "(G)거버넌스" };
@@ -134,10 +134,11 @@ export default function KpiTargetsPage() {
                 {/* 컬럼 헤더 */}
                 <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b-2 border-border text-[10px] font-semibold text-muted-foreground">
                   <span className="w-6 shrink-0 text-center">#</span>
-                  <span style={{ width: "20%" }} className="shrink-0">지표명</span>
-                  <span style={{ width: "20%" }} className="shrink-0">설명</span>
+                  <span style={{ width: "18%" }} className="shrink-0">지표명</span>
+                  <span style={{ width: "18%" }} className="shrink-0">설명</span>
+                  <span className="w-14 shrink-0 text-center">관리 수준</span>
                   <span className="w-20 shrink-0">구분</span>
-                  <span style={{ width: "15%" }} className="shrink-0">단위</span>
+                  <span style={{ width: "12%" }} className="shrink-0">단위</span>
                   <span className="w-24 shrink-0 text-right">전년 실적</span>
                   <span className="w-28 shrink-0 text-center">목표값</span>
                   <span className="w-20 shrink-0 text-right">전년 대비</span>
@@ -151,6 +152,7 @@ export default function KpiTargetsPage() {
                     </div>
                     {rows.map((m, idx) => {
                       const hasTarget = values[m.id] && values[m.id] !== "0";
+                      const isGeneral = !m.managementLevel || m.managementLevel === "general";
                       const isExpanded = expandedId === m.id;
                       const prevValue = prevPerfMap[m.id] as number | undefined;
                       const benchmark = getKpiBenchmark(m.name, industry);
@@ -164,15 +166,26 @@ export default function KpiTargetsPage() {
                             onClick={() => setExpandedId(isExpanded ? null : m.id)}
                           >
                             <span className="w-6 shrink-0 text-center text-xs text-muted-foreground">{idx + 1}</span>
-                            <span style={{ width: "20%" }} className="shrink-0 text-xs font-medium truncate">{m.name}</span>
-                            <span style={{ width: "20%" }} className="shrink-0 text-xs text-muted-foreground truncate">{m.description || "—"}</span>
+                            <span style={{ width: "18%" }} className="shrink-0 text-xs font-medium truncate">{m.name}</span>
+                            <span style={{ width: "18%" }} className="shrink-0 text-xs text-muted-foreground truncate">{m.description || "—"}</span>
+                            <span className="w-14 shrink-0 text-center">
+                              {m.managementLevel === "critical" ? (
+                                <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">의무</span>
+                              ) : m.managementLevel === "material" ? (
+                                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">중대</span>
+                              ) : (
+                                <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground">일반</span>
+                              )}
+                            </span>
                             <span className="w-20 shrink-0 text-xs text-muted-foreground truncate">{m.category}</span>
-                            <span style={{ width: "15%" }} className="shrink-0 text-xs text-muted-foreground">{m.unit || "—"}</span>
+                            <span style={{ width: "12%" }} className="shrink-0 text-xs text-muted-foreground">{m.unit || "—"}</span>
                             <span className="w-24 shrink-0 text-xs text-muted-foreground text-right">
                               {prevValue != null ? prevValue.toLocaleString() : "—"}
                             </span>
                             <div className="w-28 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              {isEditing ? (
+                              {isGeneral ? (
+                                <span className="block text-center text-[10px] text-muted-foreground italic">모니터링</span>
+                              ) : isEditing ? (
                                 (() => {
                                   const defaultReduction = benchmark?.suggestedReductions?.[1] ?? 5;
                                   const suggested = prevValue ? Math.round(prevValue * (1 - defaultReduction / 100) * 1000) / 1000 : null;
