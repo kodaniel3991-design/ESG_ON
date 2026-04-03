@@ -12,8 +12,7 @@ import { KpiSummaryCards } from "@/components/kpi/kpi-summary-cards";
 import { KpiListTable } from "@/components/kpi/kpi-list-table";
 import { KpiDetailDrawer } from "@/components/kpi/kpi-detail-drawer";
 import { KpiTargetModal } from "@/components/kpi/kpi-target-modal";
-import { Button } from "@/components/ui/button";
-import { FileUp, Plus, PenLine } from "lucide-react";
+
 import type { KpiManagementItem, KpiCategory } from "@/types";
 
 function genId() {
@@ -116,26 +115,32 @@ export default function KPIDashboardPage() {
   const materialCount = (list ?? []).filter((k) => k.managementLevel === "material").length;
   const generalCount = (list ?? []).filter((k) => !k.managementLevel || k.managementLevel === "general").length;
 
+  const totalKpis = (list ?? []).length;
+  const withTarget = (list ?? []).filter((k) => k.target !== "—" && k.target !== 0).length;
+  const withActual = (list ?? []).filter((k) => k.actual != null).length;
+  const completionPct = totalKpis > 0 ? Math.round((withActual / totalKpis) * 100) : 0;
+
   return (
     <PageShell
-      title="KPI 대시보드"
-      description="ESG·탄소 핵심 성과 지표를 한눈에 확인합니다."
+      title="KPI 관리"
+      description="ESG·탄소 핵심 성과 지표를 관리합니다."
       data-page="kpi-dashboard"
       headerChildren={<KpiSubNav />}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm">
-          <PenLine className="mr-1.5 h-4 w-4" />
-          데이터 입력
-        </Button>
-        <Button variant="outline" size="sm">
-          <FileUp className="mr-1.5 h-4 w-4" />
-          Excel 업로드
-        </Button>
-        <Button variant="outline" size="sm">
-          <Plus className="mr-1.5 h-4 w-4" />
-          지표 추가
-        </Button>
+      {/* 진행 현황 */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold">KPI 관리 현황</h2>
+            <p className="text-sm text-muted-foreground">
+              {totalKpis}개 KPI · 목표 설정 {withTarget}개 · 데이터 입력 {withActual}개
+            </p>
+          </div>
+          <span className="text-2xl font-bold text-primary">{completionPct}%</span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-2.5 rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} />
+        </div>
       </div>
 
       {/* 관리 수준별 요약 */}
