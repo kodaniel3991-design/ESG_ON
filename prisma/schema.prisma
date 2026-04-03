@@ -159,6 +159,8 @@ model Organization {
   scope3Categories     String?    @map("scope3_categories") @db.Text
   selectedFrameworks   String?    @map("selected_frameworks") @db.Text
   distanceApiSettings  String?    @map("distance_api_settings") @db.Text
+  /// JSON: 중대성 평가 설정 { threshold, period, year }
+  materialitySettings  String?    @map("materiality_settings") @db.Text
   /// 기업 상태: active, suspended, terminated
   status               String     @default("active") @db.VarChar(30)
   businessNumber       String?    @map("business_number") @db.VarChar(30)

@@ -88,6 +88,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, count: idx });
     }
 
+    if (type === "settings") {
+      const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { materialitySettings: true } });
+      const defaults = { threshold: 3.5, period: "annual", year: new Date().getFullYear(), assessmentName: "" };
+      const saved = org?.materialitySettings ? JSON.parse(org.materialitySettings) : {};
+      return NextResponse.json({ ...defaults, ...saved });
+    }
+
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   } catch (err: any) {
     if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
@@ -96,15 +103,34 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/materiality — save issues (평가 점수 저장)
+// POST /api/materiality — save issues / settings
 export async function POST(req: NextRequest) {
   try {
     const { organizationId } = await getAuthOrg();
     const body = await req.json();
-    const { items } = body as { items: any[] };
+    const { action } = body;
 
+    // 설정 저장
+    if (action === "save-settings") {
+      const { settings } = body;
+      await prisma.organization.update({
+        where: { id: organizationId },
+        data: { materialitySettings: JSON.stringify(settings) },
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    // 이슈 삭제
+    if (action === "delete-issue") {
+      const issue = await prisma.materialityIssue.findUnique({ where: { id: body.id }, select: { organizationId: true } });
+      if (!issue || issue.organizationId !== organizationId) return NextResponse.json({ error: "권한 없음" }, { status: 403 });
+      await prisma.materialityIssue.delete({ where: { id: body.id } });
+      return NextResponse.json({ ok: true });
+    }
+
+    // 이슈 점수 저장 (기존)
+    const { items } = body as { items: any[] };
     for (const item of items) {
-      // 심각성 3요소에서 impactScore 자동 계산 (평균)
       const scale = item.impactScale ?? null;
       const scope = item.impactScope ?? null;
       const irremediability = item.impactIrremediability ?? null;
