@@ -19,9 +19,11 @@ export async function GET(req: NextRequest) {
           benchmarkScore: parseFloat(String(r.benchmarkScore)),
           kpiLinkedCount: r.kpiLinkedCount,
           kpiConnectionStatus: r.kpiConnectionStatus,
+          impactScale: r.impactScale != null ? parseFloat(String(r.impactScale)) : null,
+          impactScope: r.impactScope != null ? parseFloat(String(r.impactScope)) : null,
+          impactIrremediability: r.impactIrremediability != null ? parseFloat(String(r.impactIrremediability)) : null,
           impactScore: r.impactScore != null ? parseFloat(String(r.impactScore)) : null,
           financialScore: r.financialScore != null ? parseFloat(String(r.financialScore)) : null,
-          stakeholderScore: r.stakeholderScore != null ? parseFloat(String(r.stakeholderScore)) : null,
         }))
       );
     }
@@ -102,27 +104,29 @@ export async function POST(req: NextRequest) {
     const { items } = body as { items: any[] };
 
     for (const item of items) {
+      // 심각성 3요소에서 impactScore 자동 계산 (평균)
+      const scale = item.impactScale ?? null;
+      const scope = item.impactScope ?? null;
+      const irremediability = item.impactIrremediability ?? null;
+      let impactScore = item.impactScore ?? null;
+      if (scale != null && scope != null && irremediability != null) {
+        impactScore = Math.round(((scale + scope + irremediability) / 3) * 100) / 100;
+      }
+
+      const data = {
+        code: item.code, name: item.name, dimension: item.dimension,
+        description: item.description ?? null,
+        kpiGroup: item.kpiGroup ?? null,
+        expertScore: item.expertScore ?? 3.0, benchmarkScore: item.benchmarkScore ?? 3.0,
+        kpiLinkedCount: item.kpiLinkedCount ?? 0,
+        impactScale: scale, impactScope: scope, impactIrremediability: irremediability,
+        impactScore, financialScore: item.financialScore ?? null,
+      };
+
       await prisma.materialityIssue.upsert({
         where: { id: item.id },
-        update: {
-          code: item.code, name: item.name, dimension: item.dimension,
-          description: item.description ?? null,
-          kpiGroup: item.kpiGroup ?? null,
-          expertScore: item.expertScore, benchmarkScore: item.benchmarkScore,
-          kpiLinkedCount: item.kpiLinkedCount ?? 0,
-          impactScore: item.impactScore ?? null,
-          financialScore: item.financialScore ?? null,
-        },
-        create: {
-          id: item.id, organizationId,
-          code: item.code, name: item.name, dimension: item.dimension,
-          description: item.description ?? null,
-          kpiGroup: item.kpiGroup ?? null,
-          expertScore: item.expertScore ?? 3.0, benchmarkScore: item.benchmarkScore ?? 3.0,
-          kpiLinkedCount: item.kpiLinkedCount ?? 0,
-          impactScore: item.impactScore ?? null,
-          financialScore: item.financialScore ?? null,
-        },
+        update: data,
+        create: { id: item.id, organizationId, ...data },
       });
     }
 

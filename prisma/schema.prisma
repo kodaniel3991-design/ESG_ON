@@ -500,7 +500,13 @@ model MaterialityIssue {
   benchmarkScore      Decimal       @default(3.0) @map("benchmark_score") @db.Decimal(3, 2)
   kpiLinkedCount      Int           @default(0) @map("kpi_linked_count")
   kpiConnectionStatus String?       @map("kpi_connection_status") @db.VarChar(50)
-  /// 이중 중대성: 영향 중대성 (환경·사회에 미치는 영향, 1~5)
+  /// GRI 심각성 3요소: 규모 (1~5) — 영향의 심각한 정도
+  impactScale         Decimal?      @map("impact_scale") @db.Decimal(3, 2)
+  /// GRI 심각성 3요소: 범위 (1~5) — 영향을 받는 범위/인원
+  impactScope         Decimal?      @map("impact_scope") @db.Decimal(3, 2)
+  /// GRI 심각성 3요소: 복구불가성 (1~5) — 원상복구 가능 여부
+  impactIrremediability Decimal?    @map("impact_irremediability") @db.Decimal(3, 2)
+  /// 이중 중대성: 영향 중대성 — 3요소 합산 평균 (자동 계산)
   impactScore         Decimal?      @map("impact_score") @db.Decimal(4, 2)
   /// 이중 중대성: 재무 중대성 (기업 재무에 미치는 리스크/기회, 1~5)
   financialScore      Decimal?      @map("financial_score") @db.Decimal(4, 2)

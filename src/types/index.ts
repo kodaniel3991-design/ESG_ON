@@ -734,7 +734,13 @@ export interface MaterialityIssue {
   aiRecommendRank?: number;
   /** KPI 카탈로그 group명 매핑 */
   kpiGroup?: string;
-  /** 이중 중대성: 영향 중대성 (환경·사회 영향, 1~5) */
+  /** GRI 심각성 3요소: 규모 (1~5) */
+  impactScale: number | null;
+  /** GRI 심각성 3요소: 범위 (1~5) */
+  impactScope: number | null;
+  /** GRI 심각성 3요소: 복구불가성 (1~5) */
+  impactIrremediability: number | null;
+  /** 이중 중대성: 영향 중대성 — 3요소 평균 (자동 계산) */
   impactScore: number | null;
   /** 이중 중대성: 재무 중대성 (기업 재무 리스크/기회, 1~5) */
   financialScore: number | null;
