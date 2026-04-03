@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MoreHorizontal, AlertCircle, FileText } from "lucide-react";
+import { MoreHorizontal, AlertCircle, FileText, ShieldCheck, Star } from "lucide-react";
 import type { KpiManagementItem, KpiCategory } from "@/types";
 import { KpiStatusBadge } from "./kpi-status-badge";
 import { cn } from "@/lib/utils";
@@ -90,6 +90,7 @@ export function KpiListTable({
             <thead>
               <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
                 <th className="px-4 py-3 font-medium">지표명</th>
+                <th className="px-4 py-3 font-medium">관리 수준</th>
                 <th className="px-4 py-3 font-medium">카테고리</th>
                 <th className="px-4 py-3 font-medium">단위</th>
                 <th className="px-4 py-3 font-medium text-right">목표</th>
@@ -116,6 +117,19 @@ export function KpiListTable({
                       {row.isMissing && <span title="누락"><AlertCircle className="h-3.5 w-3.5 text-carbon-warning" /></span>}
                       {row.name}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {row.managementLevel === "critical" ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                        <ShieldCheck className="h-3 w-3" /> 의무
+                      </span>
+                    ) : row.managementLevel === "material" ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                        <Star className="h-3 w-3" /> 중대
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">일반</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{CATEGORY_LABEL[row.category]}</td>
                   <td className="px-4 py-3 text-muted-foreground">{row.unit}</td>

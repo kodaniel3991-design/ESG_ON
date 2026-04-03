@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
           unit: r.unit,
           description: r.description ?? "",
           reportIncluded: r.reportIncluded,
+          managementLevel: r.managementLevel,
           calcType: r.calcType,
           calcRule: r.calcRule ? JSON.parse(r.calcRule) : null,
         }))
@@ -319,8 +320,19 @@ export async function POST(req: NextRequest) {
           description: string;
         }[];
       };
+
+      // 카탈로그에서 priority 조회 (critical → "critical" 관리 수준)
+      const catalogItems = await prisma.kpiCatalog.findMany({
+        where: { active: true },
+        select: { name: true, priority: true },
+      });
+      const priorityMap = new Map(catalogItems.map((c) => [c.name, c.priority]));
+
       for (const item of items) {
         const { calcType, calcRule } = resolveAutoCalcRule(item.name);
+        const catalogPriority = priorityMap.get(item.name);
+        const managementLevel = catalogPriority === "critical" ? "critical" : "general";
+
         const existing = await prisma.kpiMaster.findUnique({ where: { code: item.code } });
         if (existing) {
           await prisma.kpiMaster.update({
@@ -332,6 +344,7 @@ export async function POST(req: NextRequest) {
               unit: item.unit,
               description: item.description,
               reportIncluded: true,
+              managementLevel,
               calcType,
               calcRule,
             },
@@ -348,6 +361,7 @@ export async function POST(req: NextRequest) {
               unit: item.unit,
               description: item.description,
               reportIncluded: true,
+              managementLevel,
               calcType,
               calcRule,
             },

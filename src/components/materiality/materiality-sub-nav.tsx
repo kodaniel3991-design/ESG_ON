@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const links = [
+  { href: "/materiality/flow", label: "평가 흐름도" },
   { href: "/materiality", label: "대시보드" },
   { href: "/materiality/issues", label: "이슈 평가" },
   { href: "/materiality/matrix", label: "매트릭스/결과" },
@@ -18,7 +19,7 @@ export function MaterialitySubNav() {
   return (
     <nav className="flex flex-wrap items-center gap-1 border-b border-border pb-2">
       {links.map((link) => {
-        const isActive = pathname === link.href || (link.href !== "/materiality" && pathname.startsWith(link.href));
+        const isActive = pathname === link.href;
         return (
           <Link
             key={link.href}

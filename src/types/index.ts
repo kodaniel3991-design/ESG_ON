@@ -528,6 +528,8 @@ export interface KpiManagementItem {
   achievementPercent?: number;
   period: string;
   status?: KpiStatus;
+  /** 관리 수준: critical(의무), material(중대), general(일반) */
+  managementLevel?: "critical" | "material" | "general";
   /** 누락 KPI 여부 (데이터 미입력) */
   isMissing?: boolean;
   /** 보고서 반영 가능 여부 */
