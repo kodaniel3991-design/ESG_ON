@@ -145,6 +145,7 @@ export async function GET(req: NextRequest) {
             status,
             isMissing: perf == null,
             reportIncluded: m.reportIncluded,
+            managementLevel: m.managementLevel,
           };
         })
       );

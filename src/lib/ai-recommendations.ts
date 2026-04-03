@@ -428,3 +428,99 @@ export function getAiRecommendation(industry: string, catalog?: KpiCatalog): AiR
     },
   };
 }
+
+/**
+ * 산업군별 중대성 이슈 AI 추천 점수
+ * kpiGroup명 → { scale, scope, irremediability, financial }
+ * 값이 없는 그룹은 기본 3.0
+ */
+export interface MaterialityScoreRecommendation {
+  scale: number;
+  scope: number;
+  irremediability: number;
+  financial: number;
+}
+
+const BASE_SCORES: Record<string, MaterialityScoreRecommendation> = {
+  "탄소/기후": { scale: 5, scope: 5, irremediability: 4.5, financial: 4.5 },
+  "에너지": { scale: 4, scope: 4, irremediability: 3, financial: 4.5 },
+  "수자원": { scale: 3.5, scope: 3.5, irremediability: 3, financial: 3 },
+  "폐기물": { scale: 3.5, scope: 3, irremediability: 2.5, financial: 3 },
+  "오염/환경 영향": { scale: 4, scope: 3.5, irremediability: 3.5, financial: 3.5 },
+  "환경 리스크/컴플라이언스": { scale: 3.5, scope: 3, irremediability: 3, financial: 4 },
+  "제품/공급망": { scale: 3.5, scope: 3.5, irremediability: 2.5, financial: 3.5 },
+  "기타": { scale: 2.5, scope: 2.5, irremediability: 2, financial: 2 },
+  "노동/안전": { scale: 4.5, scope: 4, irremediability: 4.5, financial: 4 },
+  "인사/고용": { scale: 3, scope: 3.5, irremediability: 2.5, financial: 3.5 },
+  "다양성/포용성(DEI)": { scale: 3, scope: 3.5, irremediability: 2, financial: 3 },
+  "노동/인권": { scale: 4.5, scope: 4, irremediability: 4, financial: 4 },
+  "공급망/협력사": { scale: 3.5, scope: 3.5, irremediability: 3, financial: 3.5 },
+  "교육/조직문화": { scale: 2.5, scope: 3, irremediability: 2, financial: 3 },
+  "고객/사회 영향": { scale: 3, scope: 3.5, irremediability: 2.5, financial: 3.5 },
+  "이사회/지배구조": { scale: 3.5, scope: 3, irremediability: 2.5, financial: 4 },
+  "윤리/반부패": { scale: 4, scope: 3.5, irremediability: 3, financial: 4.5 },
+  "정보보안/데이터 보호": { scale: 4, scope: 4, irremediability: 3.5, financial: 4.5 },
+  "리스크 관리/내부통제": { scale: 3, scope: 3, irremediability: 2.5, financial: 4 },
+  "공시/투명성": { scale: 3, scope: 3, irremediability: 2, financial: 3.5 },
+  "공급망 거버넌스": { scale: 3.5, scope: 3.5, irremediability: 3, financial: 3.5 },
+  "정책/시스템": { scale: 2.5, scope: 2.5, irremediability: 2, financial: 3 },
+};
+
+// 산업군별 가중치 조정 (기본 점수에 가산)
+const INDUSTRY_ADJUSTMENTS: Record<string, Record<string, Partial<MaterialityScoreRecommendation>>> = {
+  자동차: {
+    "탄소/기후": { financial: 0.5 },
+    "공급망/협력사": { scale: 0.5, financial: 0.5 },
+    "노동/안전": { scale: 0.5, financial: 0.5 },
+    "제품/공급망": { scale: 0.5, financial: 0.5 },
+  },
+  제조: {
+    "탄소/기후": { financial: 0.5 },
+    "에너지": { scale: 0.5, financial: 0.5 },
+    "노동/안전": { scale: 0.5, financial: 0.5 },
+    "오염/환경 영향": { scale: 0.5, financial: 0.5 },
+  },
+  건설: {
+    "노동/안전": { scale: 1, irremediability: 0.5, financial: 0.5 },
+    "폐기물": { scale: 0.5, financial: 0.5 },
+  },
+  "IT/소프트웨어": {
+    "정보보안/데이터 보호": { scale: 0.5, financial: 0.5 },
+    "인사/고용": { scale: 0.5, financial: 0.5 },
+    "탄소/기후": { scale: -1, financial: -0.5 },
+    "수자원": { scale: -1, financial: -1 },
+  },
+  금융: {
+    "윤리/반부패": { scale: 0.5, financial: 0.5 },
+    "정보보안/데이터 보호": { scale: 0.5, financial: 0.5 },
+    "리스크 관리/내부통제": { scale: 0.5, financial: 0.5 },
+    "노동/안전": { scale: -1, financial: -1 },
+  },
+  에너지: {
+    "탄소/기후": { scale: 0.5, scope: 0.5, financial: 0.5 },
+    "환경 리스크/컴플라이언스": { scale: 0.5, financial: 0.5 },
+  },
+  화학: {
+    "오염/환경 영향": { scale: 1, irremediability: 0.5, financial: 0.5 },
+    "수자원": { scale: 0.5, financial: 0.5 },
+    "노동/안전": { scale: 0.5 },
+  },
+};
+
+const clamp = (v: number) => Math.max(1, Math.min(5, Math.round(v * 2) / 2));
+
+/** 산업군 기반 중대성 이슈 AI 추천 점수 반환 */
+export function getMaterialityScoreRecommendation(
+  industry: string,
+  kpiGroup: string,
+): MaterialityScoreRecommendation {
+  const base = BASE_SCORES[kpiGroup] ?? { scale: 3, scope: 3, irremediability: 3, financial: 3 };
+  const adj = INDUSTRY_ADJUSTMENTS[industry]?.[kpiGroup];
+  if (!adj) return base;
+  return {
+    scale: clamp(base.scale + (adj.scale ?? 0)),
+    scope: clamp(base.scope + (adj.scope ?? 0)),
+    irremediability: clamp(base.irremediability + (adj.irremediability ?? 0)),
+    financial: clamp(base.financial + (adj.financial ?? 0)),
+  };
+}
