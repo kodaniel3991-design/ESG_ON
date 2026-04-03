@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
@@ -174,55 +174,54 @@ export default function KpiTargetsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="w-16 pb-2 pr-2 font-medium">코드</th>
-                      <th className="pb-2 pr-2 font-medium">지표명</th>
-                      <th className="w-28 pb-2 pr-2 font-medium">구분</th>
-                      <th className="w-20 pb-2 pr-2 font-medium">도메인</th>
-                      <th className="w-16 pb-2 pr-2 font-medium">단위</th>
-                      <th className="w-28 pb-2 text-right font-medium">목표값</th>
+                    <tr className="border-b-2 border-border text-left text-muted-foreground bg-muted/30">
+                      <th className="w-8 py-2.5 px-3 font-semibold text-center">#</th>
+                      <th className="py-2.5 px-3 font-semibold">지표명</th>
+                      <th className="w-20 py-2.5 px-3 font-semibold">구분</th>
+                      <th className="w-24 py-2.5 px-3 font-semibold">단위</th>
+                      <th className="w-32 py-2.5 px-3 text-right font-semibold">목표값</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/50">
+                  <tbody>
                     {Object.entries(grouped).map(([domain, rows]) => (
-                      <>
-                        <tr key={`header-${domain}`}>
-                          <td
-                            colSpan={6}
-                            className="bg-muted/40 px-1 py-1.5 text-xs font-semibold text-muted-foreground"
-                          >
+                      <React.Fragment key={`group-${domain}`}>
+                        <tr>
+                          <td colSpan={5} className="bg-muted/50 px-3 py-2 text-xs font-bold text-foreground border-b border-border">
                             {DOMAIN_LABEL[domain] ?? domain}
+                            <span className="ml-2 font-normal text-muted-foreground">({rows.length})</span>
                           </td>
                         </tr>
-                        {rows.map((m) => (
-                          <tr key={m.id} className="align-middle">
-                            <td className="py-1.5 pr-2 font-mono text-muted-foreground">{m.code}</td>
-                            <td className="py-1.5 pr-2 font-medium">{m.name || "—"}</td>
-                            <td className="py-1.5 pr-2 text-muted-foreground">{m.category}</td>
-                            <td className="py-1.5 pr-2 text-muted-foreground">
-                              {DOMAIN_LABEL[m.esgDomain] ?? m.esgDomain}
-                            </td>
-                            <td className="py-1.5 pr-2 text-muted-foreground">{m.unit}</td>
-                            <td className="py-1.5">
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  value={values[m.id] ?? ""}
-                                  onChange={(e) =>
-                                    setValues((prev) => ({ ...prev, [m.id]: e.target.value }))
-                                  }
-                                  placeholder="목표값 입력"
-                                  className={inputClass}
-                                />
-                              ) : (
-                                <span className="block text-right tabular-nums">
-                                  {values[m.id] ? Number(values[m.id]).toLocaleString() : "—"}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </>
+                        {rows.map((m, idx) => {
+                          const hasTarget = values[m.id] && values[m.id] !== "0";
+                          return (
+                            <tr key={m.id} className={`border-b border-border/30 transition-colors ${isEditing ? "hover:bg-primary/[0.02]" : "hover:bg-muted/30"}`}>
+                              <td className="py-2 px-3 text-center text-muted-foreground">{idx + 1}</td>
+                              <td className="py-2 px-3">
+                                <span className="font-medium text-foreground">{m.name}</span>
+                              </td>
+                              <td className="py-2 px-3 text-muted-foreground">{m.category}</td>
+                              <td className="py-2 px-3 text-muted-foreground">{m.unit || "—"}</td>
+                              <td className="py-2 px-3">
+                                {isEditing ? (
+                                  <input
+                                    type="number"
+                                    value={values[m.id] ?? ""}
+                                    onChange={(e) =>
+                                      setValues((prev) => ({ ...prev, [m.id]: e.target.value }))
+                                    }
+                                    placeholder="목표값 입력"
+                                    className={inputClass}
+                                  />
+                                ) : (
+                                  <span className={`block text-right tabular-nums ${hasTarget ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                                    {hasTarget ? Number(values[m.id]).toLocaleString() : "—"}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
